@@ -1,0 +1,49 @@
+{
+  "name": "com.offlinespeecher.offline-speech-recognition",
+  "version": "1.0.0",
+  "displayName": "Offline Speech Recognition",
+  "description": "Professional offline Speech-to-Text (STT) plugin for Unity 6 using Whisper models. Works on Windows and Android without internet connection.",
+  "unity": "2023.2",
+  "unityRelease": "0f1 or later",
+  "author": {
+    "name": "Offline Speech Recognition",
+    "url": "https://github.com/yourusername/offline-speech-recognition"
+  },
+  "license": "MIT",
+  "licensesUrl": "https://opensource.org/licenses/MIT",
+  "keywords": [
+    "speech-to-text",
+    "stt",
+    "voice",
+    "whisper",
+    "ai",
+    "ml",
+    "offline",
+    "transcription",
+    "microphone",
+    "audio"
+  ],
+  "category": "Audio",
+  "hideInEditor": false,
+  "dependencies": {
+    "com.unity.sentis": "1.0.0-exp.1",
+    "com.unity.burst": "1.8.8"
+  },
+  "samples": [
+    {
+      "displayName": "Basic STT Example",
+      "description": "Simple example showing microphone recording and transcription",
+      "path": "Examples"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/offline-speech-recognition.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/offline-speech-recognition/issues"
+  },
+  "publishConfig": {
+    "registry": "https://github.com/yourusername/offline-speech-recognition"
+  }
+}
