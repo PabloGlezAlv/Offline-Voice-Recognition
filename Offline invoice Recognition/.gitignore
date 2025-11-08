@@ -1,0 +1,9 @@
+# Unity generated
+*.meta
+
+# Downloaded models (users will download these themselves)
+StreamingAssets/
+
+# OS generated
+.DS_Store
+Thumbs.db

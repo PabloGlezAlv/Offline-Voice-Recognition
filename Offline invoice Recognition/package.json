@@ -1,0 +1,39 @@
+{
+  "name": "com.offlineinvoicerecognition.stt",
+  "version": "1.0.0",
+  "displayName": "Offline Invoice Recognition - Speech to Text",
+  "description": "Offline speech-to-text plugin for Unity powered by Whisper and Unity Sentis. Supports 99+ languages with no internet required after model download. Perfect for voice commands, accessibility, and interactive experiences.",
+  "unity": "2022.3",
+  "keywords": [
+    "speech",
+    "voice",
+    "recognition",
+    "stt",
+    "whisper",
+    "ai",
+    "ml",
+    "offline",
+    "multilingual",
+    "sentis"
+  ],
+  "category": "Audio",
+  "dependencies": {
+    "com.unity.sentis": "1.3.0"
+  },
+  "author": {
+    "name": "Your Name",
+    "email": "your.email@example.com",
+    "url": "https://yourwebsite.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/Offline-Voice-Recognition.git"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Demo",
+      "description": "Basic example showing how to use the STT Engine with microphone recording and AudioClip transcription",
+      "path": "Samples~/BasicDemo"
+    }
+  ]
+}
