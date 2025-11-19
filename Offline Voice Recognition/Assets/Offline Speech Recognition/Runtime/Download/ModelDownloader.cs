@@ -62,15 +62,20 @@ namespace OfflineSpeechRecognition.Download
         /// </summary>
         public void StartDownload(WhisperModel model)
         {
+            Debug.Log($"[ModelDownloader.StartDownload] Called for {model.GetSizeString()}, _isDownloading={_isDownloading}");
+
             if (_isDownloading)
             {
-                OnDownloadError?.Invoke("A download is already in progress");
+                string errorMsg = "A download is already in progress";
+                Debug.LogWarning($"[ModelDownloader.StartDownload] {errorMsg}");
+                OnDownloadError?.Invoke(errorMsg);
                 return;
             }
 
             // Ensure HttpClient is initialized
             EnsureHttpClient();
 
+            Debug.Log($"[ModelDownloader.StartDownload] Starting coroutine for {model.GetSizeString()}");
             StartCoroutine(DownloadModelCoroutine(model));
         }
 

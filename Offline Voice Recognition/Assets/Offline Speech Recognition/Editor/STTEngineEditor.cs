@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using OfflineSpeechRecognition.Core;
@@ -17,26 +18,177 @@ namespace OfflineSpeechRecognition.Editor
     {
         private STTEngine _engine;
         private ModelManager _modelManager;
+        private ModelDownloader _modelDownloader;
         private Dictionary<WhisperModel.ModelSize, float> _downloadProgress = new Dictionary<WhisperModel.ModelSize, float>();
         private Dictionary<WhisperModel.ModelSize, bool> _isDownloading = new Dictionary<WhisperModel.ModelSize, bool>();
+        private Dictionary<WhisperModel.ModelSize, string> _downloadingStatus = new Dictionary<WhisperModel.ModelSize, string>();
         private double _lastRefreshTime;
+        private WhisperModel.ModelSize? _lastClickedModel = null;
+        private double _lastClickTime = -999;
 
         private void OnEnable()
         {
             _engine = target as STTEngine;
-            _modelManager = FindObjectOfType<ModelManager>();
+            _modelManager = UnityEngine.Object.FindFirstObjectByType<ModelManager>();
+
+            Debug.Log($"[STTEngineEditor] OnEnable - Engine: {(_engine != null ? "Found" : "Null")}, Manager: {(_modelManager != null ? "Found" : "Null")}");
+
+            // Initialize STTEngine for editor if needed
+            if (_engine != null)
+            {
+                Debug.Log("[STTEngineEditor] Initializing STTEngine for editor mode...");
+                _engine.InitializeForEditor();
+            }
+
+            // Find ModelDownloader in children of STTEngine
+            if (_engine != null)
+            {
+                _modelDownloader = _engine.GetComponentInChildren<ModelDownloader>();
+
+                // Subscribe to download progress events
+                if (_modelDownloader != null)
+                {
+                    _modelDownloader.OnDownloadProgress += OnDownloadProgress;
+                    _modelDownloader.OnDownloadComplete += OnDownloadComplete;
+                    _modelDownloader.OnDownloadError += OnDownloadError;
+                    Debug.Log("[STTEngineEditor] Successfully subscribed to ModelDownloader events");
+                }
+                else
+                {
+                    Debug.LogWarning("[STTEngineEditor] ModelDownloader not found in STTEngine children! Trying again...");
+                    // Try one more time after a brief delay
+                    UnityEditor.EditorApplication.delayCall += () =>
+                    {
+                        if (_engine != null)
+                        {
+                            _modelDownloader = _engine.GetComponentInChildren<ModelDownloader>();
+                            if (_modelDownloader != null)
+                            {
+                                _modelDownloader.OnDownloadProgress += OnDownloadProgress;
+                                _modelDownloader.OnDownloadComplete += OnDownloadComplete;
+                                _modelDownloader.OnDownloadError += OnDownloadError;
+                                Debug.Log("[STTEngineEditor] Successfully subscribed to ModelDownloader events (delayed)");
+                            }
+                        }
+                    };
+                }
+            }
+            else
+            {
+                Debug.LogError("[STTEngineEditor] STTEngine is null!");
+            }
 
             // Initialize download tracking
             foreach (WhisperModel.ModelSize size in System.Enum.GetValues(typeof(WhisperModel.ModelSize)))
             {
                 _isDownloading[size] = false;
                 _downloadProgress[size] = 0f;
+                _downloadingStatus[size] = "";
             }
+        }
+
+        private void OnDisable()
+        {
+            // Unsubscribe from events
+            if (_modelDownloader != null)
+            {
+                _modelDownloader.OnDownloadProgress -= OnDownloadProgress;
+                _modelDownloader.OnDownloadComplete -= OnDownloadComplete;
+                _modelDownloader.OnDownloadError -= OnDownloadError;
+            }
+        }
+
+        /// <summary>
+        /// Handle download progress updates
+        /// </summary>
+        private void OnDownloadProgress(float progress)
+        {
+            Debug.Log($"[STTEngineEditor.OnDownloadProgress] Progress: {(progress * 100):F1}%");
+
+            // Find which model is downloading and update its progress
+            if (_engine != null)
+            {
+                var models = _engine.GetAllModels();
+                foreach (var model in models)
+                {
+                    if (!model.IsDownloaded && _isDownloading.ContainsKey(model.Size) && _isDownloading[model.Size])
+                    {
+                        _downloadProgress[model.Size] = progress;
+                        _downloadingStatus[model.Size] = $"{(progress * 100):F1}%";
+                        Debug.Log($"[STTEngineEditor] Updated {model.GetSizeString()} progress to {(progress * 100):F1}%");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[STTEngineEditor.OnDownloadProgress] Engine is null!");
+            }
+
+            Repaint();
+        }
+
+        /// <summary>
+        /// Handle download completion
+        /// </summary>
+        private void OnDownloadComplete(bool success)
+        {
+            Debug.Log($"[STTEngineEditor.OnDownloadComplete] Success: {success}");
+
+            if (_engine != null)
+            {
+                var models = _engine.GetAllModels();
+                foreach (var model in models)
+                {
+                    if (_isDownloading.ContainsKey(model.Size) && _isDownloading[model.Size])
+                    {
+                        _isDownloading[model.Size] = false;
+                        _downloadProgress[model.Size] = success ? 1f : 0f;
+                        _downloadingStatus[model.Size] = success ? "Completed" : "Failed";
+
+                        // Refresh model status
+                        model.RefreshDownloadStatus();
+
+                        Debug.Log($"[STTEngineEditor] Download {(success ? "completed" : "failed")} for {model.GetSizeString()}");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[STTEngineEditor.OnDownloadComplete] Engine is null!");
+            }
+
+            Repaint();
+        }
+
+        /// <summary>
+        /// Handle download errors
+        /// </summary>
+        private void OnDownloadError(string error)
+        {
+            Debug.LogError($"Download error: {error}");
+
+            if (_engine != null)
+            {
+                var models = _engine.GetAllModels();
+                foreach (var model in models)
+                {
+                    if (_isDownloading.ContainsKey(model.Size) && _isDownloading[model.Size])
+                    {
+                        _isDownloading[model.Size] = false;
+                        _downloadingStatus[model.Size] = "Error";
+                        break;
+                    }
+                }
+            }
+
+            Repaint();
         }
 
         public override void OnInspectorGUI()
         {
-            DrawHeader();
+            DrawEditorHeader();
             DrawDefaultInspector();
             DrawModelsSection();
             DrawStorageSection();
@@ -51,9 +203,9 @@ namespace OfflineSpeechRecognition.Editor
         }
 
         /// <summary>
-        /// Draw header
+        /// Draw editor header
         /// </summary>
-        private void DrawHeader()
+        private void DrawEditorHeader()
         {
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Offline Speech Recognition - STT Engine", EditorStyles.boldLabel);
@@ -78,6 +230,7 @@ namespace OfflineSpeechRecognition.Editor
             if (_engine == null)
             {
                 EditorGUILayout.HelpBox("STTEngine reference is null", MessageType.Error);
+                Debug.LogError("[STTEngineEditor.DrawModelsSection] STTEngine is null!");
                 return;
             }
 
@@ -87,8 +240,12 @@ namespace OfflineSpeechRecognition.Editor
             if (models == null || models.Count == 0)
             {
                 EditorGUILayout.HelpBox("No models available. Make sure STTEngine is properly initialized.", MessageType.Warning);
+                Debug.LogWarning("[STTEngineEditor.DrawModelsSection] No models available!");
                 return;
             }
+
+            // Debug info about downloader
+            EditorGUILayout.HelpBox($"Downloader Status: {(_modelDownloader != null ? "Connected" : "Not Connected")}, Downloading: {(_modelDownloader != null ? _modelDownloader.IsDownloading : false)}", MessageType.Info);
 
             // Draw each model
             foreach (var model in models)
@@ -179,11 +336,13 @@ namespace OfflineSpeechRecognition.Editor
                 if (_isDownloading.ContainsKey(model.Size) && _isDownloading[model.Size])
                 {
                     float progress = _downloadProgress.ContainsKey(model.Size) ? _downloadProgress[model.Size] : 0f;
-                    EditorGUILayout.LabelField($"Downloading... {(progress * 100):F0}%");
+                    string status = _downloadingStatus.ContainsKey(model.Size) ? _downloadingStatus[model.Size] : "";
+
+                    EditorGUILayout.LabelField($"Status: {status}");
 
                     // Simple progress bar using a filled rectangle
                     Rect rect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
-                    EditorGUI.ProgressBar(rect, progress, $"{(progress * 100):F0}%");
+                    EditorGUI.ProgressBar(rect, Mathf.Clamp01(progress), $"{Mathf.Clamp01(progress * 100):F1}%");
                     EditorGUILayout.Space(3);
                 }
 
@@ -227,12 +386,34 @@ namespace OfflineSpeechRecognition.Editor
                         GUI.backgroundColor = new Color(0.3f, 0.6f, 0.8f); // Blue
                         if (GUILayout.Button($"⬇ Download {model.GetSizeString()}", GUILayout.Height(25)))
                         {
-                            if (_engine != null)
+                            // Prevent double-clicks within 500ms
+                            double timeSinceLastClick = EditorApplication.timeSinceStartup - _lastClickTime;
+                            bool isSameModel = _lastClickedModel == model.Size;
+
+                            if (isSameModel && timeSinceLastClick < 0.5)
                             {
-                                _engine.DownloadModel(model.Size);
-                                _isDownloading[model.Size] = true;
-                                _downloadProgress[model.Size] = 0f;
-                                Debug.Log($"Starting download of {model.GetSizeString()} model ({model.GetReadableSize()})");
+                                Debug.LogWarning($"[STTEngineEditor] Double-click prevented for {model.GetSizeString()} (clicked {timeSinceLastClick:F3}s ago)");
+                            }
+                            else
+                            {
+                                Debug.Log($"[STTEngineEditor] Download button clicked for {model.GetSizeString()}");
+                                Debug.Log($"[STTEngineEditor] Engine: {(_engine != null ? "Found" : "Null")}, Downloader: {(_modelDownloader != null ? "Found" : "Null")}");
+
+                                if (_engine != null)
+                                {
+                                    Debug.Log($"[STTEngineEditor] Calling DownloadModel({model.Size})");
+                                    _engine.DownloadModel(model.Size);
+                                    _isDownloading[model.Size] = true;
+                                    _downloadProgress[model.Size] = 0f;
+                                    Debug.Log($"[STTEngineEditor] Download started for {model.GetSizeString()} model ({model.GetReadableSize()})");
+                                }
+                                else
+                                {
+                                    Debug.LogError("[STTEngineEditor] Engine is null, cannot start download!");
+                                }
+
+                                _lastClickedModel = model.Size;
+                                _lastClickTime = EditorApplication.timeSinceStartup;
                             }
                         }
                         GUI.backgroundColor = guiColor;
