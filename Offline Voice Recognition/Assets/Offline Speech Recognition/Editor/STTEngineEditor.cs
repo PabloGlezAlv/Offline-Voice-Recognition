@@ -381,39 +381,60 @@ namespace OfflineSpeechRecognition.Editor
                     }
                     else
                     {
-                        // Download button
+                        // Download or Cancel button based on download state
                         var guiColor = GUI.backgroundColor;
-                        GUI.backgroundColor = new Color(0.3f, 0.6f, 0.8f); // Blue
-                        if (GUILayout.Button($"⬇ Download {model.GetSizeString()}", GUILayout.Height(25)))
+
+                        if (_isDownloading[model.Size])
                         {
-                            // Prevent double-clicks within 500ms
-                            double timeSinceLastClick = EditorApplication.timeSinceStartup - _lastClickTime;
-                            bool isSameModel = _lastClickedModel == model.Size;
-
-                            if (isSameModel && timeSinceLastClick < 0.5)
+                            // Show cancel button during download
+                            GUI.backgroundColor = new Color(0.8f, 0.3f, 0.3f); // Red
+                            if (GUILayout.Button($"⊘ Cancel {model.GetSizeString()}", GUILayout.Height(25)))
                             {
-                                Debug.LogWarning($"[STTEngineEditor] Double-click prevented for {model.GetSizeString()} (clicked {timeSinceLastClick:F3}s ago)");
-                            }
-                            else
-                            {
-                                Debug.Log($"[STTEngineEditor] Download button clicked for {model.GetSizeString()}");
-                                Debug.Log($"[STTEngineEditor] Engine: {(_engine != null ? "Found" : "Null")}, Downloader: {(_modelDownloader != null ? "Found" : "Null")}");
-
-                                if (_engine != null)
+                                Debug.Log($"[STTEngineEditor] Cancel button clicked for {model.GetSizeString()}");
+                                if (_modelDownloader != null)
                                 {
-                                    Debug.Log($"[STTEngineEditor] Calling DownloadModel({model.Size})");
-                                    _engine.DownloadModel(model.Size);
-                                    _isDownloading[model.Size] = true;
+                                    _modelDownloader.CancelDownload();
+                                    _isDownloading[model.Size] = false;
                                     _downloadProgress[model.Size] = 0f;
-                                    Debug.Log($"[STTEngineEditor] Download started for {model.GetSizeString()} model ({model.GetReadableSize()})");
+                                    Debug.Log($"[STTEngineEditor] Download cancelled for {model.GetSizeString()}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Show download button
+                            GUI.backgroundColor = new Color(0.3f, 0.6f, 0.8f); // Blue
+                            if (GUILayout.Button($"⬇ Download {model.GetSizeString()}", GUILayout.Height(25)))
+                            {
+                                // Prevent double-clicks within 500ms
+                                double timeSinceLastClick = EditorApplication.timeSinceStartup - _lastClickTime;
+                                bool isSameModel = _lastClickedModel == model.Size;
+
+                                if (isSameModel && timeSinceLastClick < 0.5)
+                                {
+                                    Debug.LogWarning($"[STTEngineEditor] Double-click prevented for {model.GetSizeString()} (clicked {timeSinceLastClick:F3}s ago)");
                                 }
                                 else
                                 {
-                                    Debug.LogError("[STTEngineEditor] Engine is null, cannot start download!");
-                                }
+                                    Debug.Log($"[STTEngineEditor] Download button clicked for {model.GetSizeString()}");
+                                    Debug.Log($"[STTEngineEditor] Engine: {(_engine != null ? "Found" : "Null")}, Downloader: {(_modelDownloader != null ? "Found" : "Null")}");
 
-                                _lastClickedModel = model.Size;
-                                _lastClickTime = EditorApplication.timeSinceStartup;
+                                    if (_engine != null)
+                                    {
+                                        Debug.Log($"[STTEngineEditor] Calling DownloadModel({model.Size})");
+                                        _engine.DownloadModel(model.Size);
+                                        _isDownloading[model.Size] = true;
+                                        _downloadProgress[model.Size] = 0f;
+                                        Debug.Log($"[STTEngineEditor] Download started for {model.GetSizeString()} model ({model.GetReadableSize()})");
+                                    }
+                                    else
+                                    {
+                                        Debug.LogError("[STTEngineEditor] Engine is null, cannot start download!");
+                                    }
+
+                                    _lastClickedModel = model.Size;
+                                    _lastClickTime = EditorApplication.timeSinceStartup;
+                                }
                             }
                         }
                         GUI.backgroundColor = guiColor;
