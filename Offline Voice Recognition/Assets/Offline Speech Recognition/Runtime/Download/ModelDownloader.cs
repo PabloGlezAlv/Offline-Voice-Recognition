@@ -33,10 +33,19 @@ namespace OfflineSpeechRecognition.Download
 
         private void OnEnable()
         {
+            EnsureHttpClient();
+        }
+
+        /// <summary>
+        /// Ensure HttpClient is initialized (lazy initialization fallback)
+        /// </summary>
+        private static void EnsureHttpClient()
+        {
             if (_httpClient == null)
             {
                 _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true });
                 _httpClient.Timeout = TimeSpan.FromSeconds(Utilities.Constants.DOWNLOAD_TIMEOUT_SECONDS);
+                Debug.Log("[ModelDownloader.EnsureHttpClient] HttpClient initialized");
             }
         }
 
@@ -58,6 +67,9 @@ namespace OfflineSpeechRecognition.Download
                 OnDownloadError?.Invoke("A download is already in progress");
                 return;
             }
+
+            // Ensure HttpClient is initialized
+            EnsureHttpClient();
 
             StartCoroutine(DownloadModelCoroutine(model));
         }
@@ -111,6 +123,16 @@ namespace OfflineSpeechRecognition.Download
         private IEnumerator DownloadFile(string url, string filePath, WhisperModel model, System.Action<bool, string> onComplete)
         {
             Debug.Log($"Downloading from: {url}");
+
+            // Double-check HttpClient is initialized (fail-safe)
+            EnsureHttpClient();
+            if (_httpClient == null)
+            {
+                string errorMsg = "Failed to initialize HttpClient";
+                onComplete?.Invoke(false, errorMsg);
+                Debug.LogError($"[ModelDownloader.DownloadFile] {errorMsg}");
+                yield break;
+            }
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var task = _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
