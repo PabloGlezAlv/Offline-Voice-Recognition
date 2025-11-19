@@ -16,8 +16,9 @@ namespace OfflineSpeechRecognition.Utilities
         public const string MODELS_FOLDER_NAME = "OfflineSpeechRecognition/Models";
         public const string CACHE_FOLDER_NAME = "OfflineSpeechRecognition/Cache";
 
-        // Hugging Face URLs
-        public const string HUGGINGFACE_BASE_URL = "https://huggingface.co/openai/whisper-{0}/resolve/main/";
+        // Hugging Face URLs - Using Xenova's ONNX conversion of Whisper models
+        // These are properly converted and tested ONNX versions
+        public const string HUGGINGFACE_BASE_URL = "https://huggingface.co/Xenova/whisper-{0}/resolve/main/";
         public const string WHISPER_MODEL_FILENAME = "onnx/model.onnx";
 
         // Model sizes
