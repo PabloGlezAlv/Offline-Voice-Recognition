@@ -15,6 +15,7 @@ namespace OfflineSpeechRecognition.Download
         private static HttpClient _httpClient;
         private bool _isDownloading;
         private HttpResponseMessage _currentResponse;
+        private double _downloadStartTime = -1;
 
         /// <summary>
         /// Callback for download progress
@@ -66,16 +67,30 @@ namespace OfflineSpeechRecognition.Download
 
             if (_isDownloading)
             {
-                string errorMsg = "A download is already in progress";
-                Debug.LogWarning($"[ModelDownloader.StartDownload] {errorMsg}");
-                OnDownloadError?.Invoke(errorMsg);
-                return;
+                // Check if the download seems to be stuck (started but no recent activity)
+                double elapsedTime = Time.realtimeSinceStartup - _downloadStartTime;
+                if (_downloadStartTime < 0 || elapsedTime > 30.0)
+                {
+                    Debug.LogWarning($"[ModelDownloader.StartDownload] Download appears stuck (elapsed: {elapsedTime:F2}s). Resetting.");
+                    _isDownloading = false;
+                    _currentResponse?.Dispose();
+                    _currentResponse = null;
+                    _downloadStartTime = -1;
+                }
+                else
+                {
+                    string errorMsg = "A download is already in progress";
+                    Debug.LogWarning($"[ModelDownloader.StartDownload] {errorMsg}");
+                    OnDownloadError?.Invoke(errorMsg);
+                    return;
+                }
             }
 
             // Ensure HttpClient is initialized
             EnsureHttpClient();
 
             Debug.Log($"[ModelDownloader.StartDownload] Starting coroutine for {model.GetSizeString()}");
+            _downloadStartTime = Time.realtimeSinceStartup;
             StartCoroutine(DownloadModelCoroutine(model));
         }
 
@@ -120,6 +135,7 @@ namespace OfflineSpeechRecognition.Download
             }
 
             _isDownloading = false;
+            _downloadStartTime = -1;
         }
 
         /// <summary>
