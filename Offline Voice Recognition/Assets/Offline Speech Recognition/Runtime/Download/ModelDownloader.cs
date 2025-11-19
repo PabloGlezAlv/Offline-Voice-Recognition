@@ -217,11 +217,14 @@ namespace OfflineSpeechRecognition.Download
         {
             long receivedBytes = 0L;
             bool error = false;
+            int updateCount = 0;
 
             if (contentStream == null)
             {
                 yield break;
             }
+
+            Debug.Log($"[ModelDownloader.ProcessDownloadStream] Starting download, total bytes: {totalBytes}");
 
             FileStream fileStream = null;
             try
@@ -250,7 +253,10 @@ namespace OfflineSpeechRecognition.Download
                 }
 
                 if (bytesRead <= 0)
+                {
+                    Debug.Log($"[ModelDownloader.ProcessDownloadStream] Stream ended, total received: {receivedBytes} bytes");
                     break;
+                }
 
                 try
                 {
@@ -268,7 +274,12 @@ namespace OfflineSpeechRecognition.Download
                 if (totalBytes > 0)
                 {
                     float progress = (float)receivedBytes / totalBytes;
+                    if (updateCount % 10 == 0) // Log every 10 updates
+                    {
+                        Debug.Log($"[ModelDownloader] Progress: {(progress * 100):F1}% ({receivedBytes}/{totalBytes} bytes)");
+                    }
                     OnDownloadProgress?.Invoke(progress);
+                    updateCount++;
                 }
 
                 yield return null;
