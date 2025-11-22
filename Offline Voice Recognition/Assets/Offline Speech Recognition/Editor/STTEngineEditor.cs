@@ -364,6 +364,8 @@ namespace OfflineSpeechRecognition.Editor
                             if (_modelDownloader != null)
                             {
                                 _modelDownloader.CancelDownload();
+                                // Small delay to ensure file handle is released before deletion
+                                System.Threading.Thread.Sleep(500);
                                 _isDownloading[model.Size] = false;
                                 _downloadProgress[model.Size] = 0f;
                                 Debug.Log($"[STTEngineEditor] Download cancelled for {model.GetSizeString()}");

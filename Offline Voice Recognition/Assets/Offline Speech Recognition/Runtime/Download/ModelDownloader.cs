@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
@@ -52,9 +53,18 @@ namespace OfflineSpeechRecognition.Download
         {
             if (_httpClient == null)
             {
-                _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true });
+                // Optimize ServicePointManager for faster downloads
+                ServicePointManager.DefaultConnectionLimit = 10; // Allow more concurrent connections
+
+                var handler = new HttpClientHandler
+                {
+                    AllowAutoRedirect = true
+                };
+
+                _httpClient = new HttpClient(handler);
                 _httpClient.Timeout = TimeSpan.FromSeconds(Utilities.Constants.DOWNLOAD_TIMEOUT_SECONDS);
-                Debug.Log("[ModelDownloader.EnsureHttpClient] HttpClient initialized");
+
+                Debug.Log("[ModelDownloader.EnsureHttpClient] HttpClient initialized with optimizations");
             }
         }
 
@@ -232,8 +242,8 @@ namespace OfflineSpeechRecognition.Download
             FileStream fileStream = null;
             try
             {
-                // Use larger buffer for FileStream (64KB) for faster disk writes
-                fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+                // Use larger buffer for FileStream (256KB) for faster disk writes, matching read buffer size
+                fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, OPTIMAL_BUFFER_SIZE, useAsync: true);
 
                 byte[] buffer = new byte[OPTIMAL_BUFFER_SIZE];
                 int bytesRead;
@@ -303,8 +313,8 @@ namespace OfflineSpeechRecognition.Download
             {
                 try
                 {
-                    // Wait up to 5 seconds for task to complete
-                    _currentDownloadTask.Wait(TimeSpan.FromSeconds(5));
+                    // Wait up to 10 seconds for task to complete (increased from 5 to ensure file handles are released)
+                    _currentDownloadTask.Wait(TimeSpan.FromSeconds(10));
                     Debug.Log("Download task completed after cancellation");
                 }
                 catch (AggregateException ex)

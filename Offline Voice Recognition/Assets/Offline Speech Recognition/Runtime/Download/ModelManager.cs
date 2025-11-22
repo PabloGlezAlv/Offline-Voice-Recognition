@@ -178,8 +178,9 @@ namespace OfflineSpeechRecognition.Download
                     if (File.Exists(model.ModelPath))
                     {
                         // Retry logic in case file is still locked by async operations
-                        int maxRetries = 3;
-                        int retryDelay = 100; // milliseconds
+                        // Increased from 3 retries to 5, and delay from 100ms to 500ms (total: 2.5 seconds)
+                        int maxRetries = 5;
+                        int retryDelay = 500; // milliseconds
 
                         for (int attempt = 0; attempt < maxRetries; attempt++)
                         {
@@ -190,10 +191,16 @@ namespace OfflineSpeechRecognition.Download
                                 Debug.Log($"Model {size} deleted successfully");
                                 return true;
                             }
-                            catch (System.IO.IOException) when (attempt < maxRetries - 1)
+                            catch (System.IO.IOException ioEx) when (attempt < maxRetries - 1)
                             {
                                 // File is in use, wait and retry
+                                Debug.LogWarning($"File {model.ModelPath} still in use (attempt {attempt + 1}/{maxRetries}): {ioEx.Message}");
                                 System.Threading.Thread.Sleep(retryDelay);
+                            }
+                            catch (System.UnauthorizedAccessException uaEx)
+                            {
+                                Debug.LogError($"Access denied when deleting {model.ModelPath}: {uaEx.Message}");
+                                return false;
                             }
                         }
                     }
