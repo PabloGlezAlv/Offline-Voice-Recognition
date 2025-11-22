@@ -273,7 +273,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
             labelText.text = "Microphone:";
             labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelText.alignment = TextAlignmentOptions.Left;
 
             // Dropdown
             GameObject dropdownObj = new GameObject("MicrophoneDropdown");
@@ -337,7 +337,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
             labelItemText.text = "Option A";
             labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelItemText.alignment = TextAlignmentOptions.Left;
 
             microphoneDropdown.template = templateRect;
 
@@ -439,7 +439,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
             labelItemText.text = "Option A";
             labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelItemText.alignment = TextAlignmentOptions.Left;
 
             modelDropdown.template = templateRect;
 
@@ -541,7 +541,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
             labelItemText.text = "Option A";
             labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelItemText.alignment = TextAlignmentOptions.Left;
 
             languageDropdown.template = templateRect;
 
@@ -593,7 +593,6 @@ namespace OfflineSpeechRecognition.Examples
             transcriptionText.text = "Transcription will appear here...";
             transcriptionText.fontSize = 18;
             transcriptionText.alignment = TextAlignmentOptions.TopLeft;
-            transcriptionText.wordWrappingRatio = 1f;
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 120;
@@ -666,7 +665,6 @@ namespace OfflineSpeechRecognition.Examples
             modelInfoText.text = "Model info will appear here...";
             modelInfoText.fontSize = 16;
             modelInfoText.alignment = TextAlignmentOptions.TopLeft;
-            modelInfoText.wordWrappingRatio = 1f;
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 55;
