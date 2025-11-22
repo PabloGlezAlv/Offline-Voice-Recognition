@@ -229,9 +229,7 @@ namespace OfflineSpeechRecognition.Examples
             recordButton.colors = colors;
 
             recordButtonText = recordBtnObj.AddComponent<TextMeshProUGUI>();
-            recordButtonText.text = "Start Recording";
-            recordButtonText.alignment = TextAlignmentOptions.Center;
-            recordButtonText.fontSize = 28;
+            SetupTextMeshPro(recordButtonText, "Start Recording", TextAlignmentOptions.Center, 28);
 
             // Cancel button
             GameObject cancelBtnObj = new GameObject("CancelButton");
@@ -252,9 +250,7 @@ namespace OfflineSpeechRecognition.Examples
             cancelButton.colors = cancelColors;
 
             TextMeshProUGUI cancelBtnText = cancelBtnObj.AddComponent<TextMeshProUGUI>();
-            cancelBtnText.text = "Cancel";
-            cancelBtnText.alignment = TextAlignmentOptions.Center;
-            cancelBtnText.fontSize = 28;
+            SetupTextMeshPro(cancelBtnText, "Cancel", TextAlignmentOptions.Center, 28);
         }
 
         private void CreateMicrophoneDropdown(GameObject parent)
@@ -272,9 +268,7 @@ namespace OfflineSpeechRecognition.Examples
             labelRect.anchoredPosition = new Vector2(-200, 15);
 
             TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
-            labelText.text = "Microphone:";
-            labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(labelText, "Microphone:", TextAlignmentOptions.Left, 20);
 
             // Dropdown
             GameObject dropdownObj = new GameObject("MicrophoneDropdown");
@@ -336,9 +330,7 @@ namespace OfflineSpeechRecognition.Examples
             labelItemRect.offsetMax = Vector2.zero;
 
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            labelItemText.text = "Option A";
-            labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
 
             microphoneDropdown.template = templateRect;
 
@@ -352,9 +344,7 @@ namespace OfflineSpeechRecognition.Examples
             captionRect.offsetMax = new Vector2(-10, 0);
 
             TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
-            captionText.text = "Select Microphone";
-            captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(captionText, "Select Microphone", TextAlignmentOptions.Left, 20);
 
             microphoneDropdown.captionText = captionText;
         }
@@ -438,9 +428,7 @@ namespace OfflineSpeechRecognition.Examples
             labelItemRect.offsetMax = Vector2.zero;
 
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            labelItemText.text = "Option A";
-            labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
 
             modelDropdown.template = templateRect;
 
@@ -540,9 +528,7 @@ namespace OfflineSpeechRecognition.Examples
             labelItemRect.offsetMax = Vector2.zero;
 
             TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            labelItemText.text = "Option A";
-            labelItemText.fontSize = 18;
-            labelItemText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
 
             languageDropdown.template = templateRect;
 
@@ -577,9 +563,7 @@ namespace OfflineSpeechRecognition.Examples
             titleRect.sizeDelta = new Vector2(0, 25);
 
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            titleText.text = "Transcription:";
-            titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(titleText, "Transcription:", TextAlignmentOptions.Left, 20);
 
             // Text area
             GameObject textObj = new GameObject("TranscriptionText");
@@ -591,9 +575,7 @@ namespace OfflineSpeechRecognition.Examples
             textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             transcriptionText = textObj.AddComponent<TextMeshProUGUI>();
-            transcriptionText.text = "Transcription will appear here...";
-            transcriptionText.fontSize = 18;
-            transcriptionText.alignment = TextAlignmentOptions.TopLeft;
+            SetupTextMeshPro(transcriptionText, "Transcription will appear here...", TextAlignmentOptions.TopLeft, 18);
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 120;
@@ -613,9 +595,7 @@ namespace OfflineSpeechRecognition.Examples
             titleRect.sizeDelta = new Vector2(0, 25);
 
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            titleText.text = "Status:";
-            titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(titleText, "Status:", TextAlignmentOptions.Left, 20);
 
             // Text area
             GameObject textObj = new GameObject("StatusText");
@@ -627,9 +607,7 @@ namespace OfflineSpeechRecognition.Examples
             textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             statusText = textObj.AddComponent<TextMeshProUGUI>();
-            statusText.text = "Ready";
-            statusText.fontSize = 18;
-            statusText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(statusText, "Ready", TextAlignmentOptions.Left, 18);
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 35;
@@ -649,9 +627,7 @@ namespace OfflineSpeechRecognition.Examples
             titleRect.sizeDelta = new Vector2(0, 25);
 
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            titleText.text = "Model Info:";
-            titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.Left;
+            SetupTextMeshPro(titleText, "Model Info:", TextAlignmentOptions.Left, 20);
 
             // Text area
             GameObject textObj = new GameObject("ModelInfoText");
@@ -663,9 +639,7 @@ namespace OfflineSpeechRecognition.Examples
             textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
 
             modelInfoText = textObj.AddComponent<TextMeshProUGUI>();
-            modelInfoText.text = "Model info will appear here...";
-            modelInfoText.fontSize = 16;
-            modelInfoText.alignment = TextAlignmentOptions.TopLeft;
+            SetupTextMeshPro(modelInfoText, "Model info will appear here...", TextAlignmentOptions.TopLeft, 16);
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 55;
@@ -941,6 +915,23 @@ namespace OfflineSpeechRecognition.Examples
             int filledLength = Mathf.RoundToInt(progress * barLength);
             string bar = new string('█', filledLength) + new string('░', barLength - filledLength);
             return $"[{bar}]";
+        }
+
+        /// <summary>
+        /// Setup TextMeshPro component with text, alignment, and font size
+        /// </summary>
+        private void SetupTextMeshPro(TextMeshProUGUI textComponent, string text, TextAlignmentOptions alignment, int fontSize)
+        {
+            try
+            {
+                textComponent.text = text;
+                textComponent.alignment = alignment;
+                textComponent.fontSize = fontSize;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"Error setting up TextMeshPro: {ex.Message}");
+            }
         }
 
         private void OnDestroy()
