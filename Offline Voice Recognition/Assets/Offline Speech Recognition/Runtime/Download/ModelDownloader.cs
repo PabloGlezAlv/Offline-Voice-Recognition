@@ -2,6 +2,9 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using OfflineSpeechRecognition.Core;
 
@@ -16,6 +19,10 @@ namespace OfflineSpeechRecognition.Download
         private bool _isDownloading;
         private HttpResponseMessage _currentResponse;
         private double _downloadStartTime = -1;
+
+        // Download optimization settings
+        private const int OPTIMAL_BUFFER_SIZE = 262144; // 256 KB buffer for faster I/O
+        private const int YIELD_INTERVAL = 10; // Yield every N chunk reads to keep Unity responsive
 
         /// <summary>
         /// Callback for download progress
@@ -59,7 +66,7 @@ namespace OfflineSpeechRecognition.Download
         }
 
         /// <summary>
-        /// Start downloading a model
+        /// Start downloading a model (async, non-blocking)
         /// </summary>
         public void StartDownload(WhisperModel model)
         {
@@ -89,15 +96,17 @@ namespace OfflineSpeechRecognition.Download
             // Ensure HttpClient is initialized
             EnsureHttpClient();
 
-            Debug.Log($"[ModelDownloader.StartDownload] Starting coroutine for {model.GetSizeString()}");
+            Debug.Log($"[ModelDownloader.StartDownload] Starting async download for {model.GetSizeString()}");
             _downloadStartTime = Time.realtimeSinceStartup;
-            StartCoroutine(DownloadModelCoroutine(model));
+
+            // Start async download without blocking
+            _ = DownloadModelAsync(model);
         }
 
         /// <summary>
-        /// Download coroutine
+        /// Download model asynchronously without coroutines (MUCH FASTER)
         /// </summary>
-        private IEnumerator DownloadModelCoroutine(WhisperModel model)
+        private async Task DownloadModelAsync(WhisperModel model)
         {
             _isDownloading = true;
             string url = model.GetDownloadUrl();
@@ -105,37 +114,44 @@ namespace OfflineSpeechRecognition.Download
             bool success = false;
             string errorMessage = "";
 
-            // Ensure directory exists
-            if (!Directory.Exists(modelDir))
+            try
             {
-                Directory.CreateDirectory(modelDir);
-            }
-
-            // Download the model file
-            yield return DownloadFile(url, model.ModelPath, model, (isSuccess, error) =>
-            {
-                success = isSuccess;
-                errorMessage = error;
-            });
-
-            if (_isDownloading) // Check if download wasn't cancelled
-            {
-                if (success)
+                // Ensure directory exists
+                if (!Directory.Exists(modelDir))
                 {
-                    model.RefreshDownloadStatus();
-                    OnDownloadComplete?.Invoke(true);
-                    Debug.Log($"Model {model.GetSizeString()} downloaded successfully");
+                    Directory.CreateDirectory(modelDir);
                 }
-                else
+
+                // Download the model file
+                success = await DownloadFileAsync(url, model.ModelPath, model);
+
+                if (_isDownloading) // Check if download wasn't cancelled
                 {
-                    Debug.LogError($"Download failed: {errorMessage}");
-                    OnDownloadError?.Invoke(errorMessage);
-                    OnDownloadComplete?.Invoke(false);
+                    if (success)
+                    {
+                        model.RefreshDownloadStatus();
+                        OnDownloadComplete?.Invoke(true);
+                        Debug.Log($"Model {model.GetSizeString()} downloaded successfully");
+                    }
+                    else
+                    {
+                        Debug.LogError($"Download failed: {errorMessage}");
+                        OnDownloadError?.Invoke(errorMessage);
+                        OnDownloadComplete?.Invoke(false);
+                    }
                 }
             }
-
-            _isDownloading = false;
-            _downloadStartTime = -1;
+            catch (Exception ex)
+            {
+                Debug.LogError($"Download error: {ex.Message}");
+                OnDownloadError?.Invoke(ex.Message);
+                OnDownloadComplete?.Invoke(false);
+            }
+            finally
+            {
+                _isDownloading = false;
+                _downloadStartTime = -1;
+            }
         }
 
         /// <summary>
@@ -181,7 +197,8 @@ namespace OfflineSpeechRecognition.Download
 
             long totalBytes = _currentResponse.Content.Headers.ContentLength ?? -1L;
             long receivedBytes = 0L;
-            var buffer = new byte[8192];
+            // Use larger buffer (256KB) for faster downloading
+            var buffer = new byte[OPTIMAL_BUFFER_SIZE];
 
             var contentStreamTask = _currentResponse.Content.ReadAsStreamAsync();
             while (!contentStreamTask.IsCompleted)
@@ -206,18 +223,31 @@ namespace OfflineSpeechRecognition.Download
             else
             {
                 Debug.Log($"Download complete: {receivedBytes} bytes written");
-                onComplete?.Invoke(true, "");
+
+                // Validate downloaded file integrity
+                if (ValidateModelIntegrity(model))
+                {
+                    Debug.Log($"[ModelDownloader] Model {model.GetSizeString()} passed integrity check");
+                    onComplete?.Invoke(true, "");
+                }
+                else
+                {
+                    Debug.LogError($"[ModelDownloader] Model {model.GetSizeString()} failed integrity check - cleaning up");
+                    CleanupIncompleteFile(filePath);
+                    onComplete?.Invoke(false, "Model file integrity check failed");
+                }
             }
         }
 
         /// <summary>
-        /// Process the download stream
+        /// Process the download stream with optimized buffer for faster downloads
         /// </summary>
         private IEnumerator ProcessDownloadStream(System.IO.Stream contentStream, string filePath, byte[] buffer, long totalBytes, System.Action<long> onBytesReceived)
         {
             long receivedBytes = 0L;
             bool error = false;
             int updateCount = 0;
+            int yieldCounter = 0;
 
             if (contentStream == null)
             {
@@ -229,7 +259,8 @@ namespace OfflineSpeechRecognition.Download
             FileStream fileStream = null;
             try
             {
-                fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                // Use larger buffer for FileStream (64KB) for faster disk writes
+                fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: false);
             }
             catch (Exception ex)
             {
@@ -243,7 +274,8 @@ namespace OfflineSpeechRecognition.Download
                 int bytesRead = 0;
                 try
                 {
-                    bytesRead = contentStream.Read(buffer, 0, buffer.Length);
+                    // Read larger chunks (256KB) for better throughput
+                    bytesRead = contentStream.Read(buffer, 0, Math.Min(buffer.Length, OPTIMAL_BUFFER_SIZE));
                 }
                 catch (Exception ex)
                 {
@@ -271,18 +303,25 @@ namespace OfflineSpeechRecognition.Download
 
                 receivedBytes += bytesRead;
 
-                if (totalBytes > 0)
+                // Only update progress and yield every N iterations to reduce overhead
+                yieldCounter++;
+                if (yieldCounter >= YIELD_INTERVAL)
                 {
-                    float progress = (float)receivedBytes / totalBytes;
-                    if (updateCount % 10 == 0) // Log every 10 updates
-                    {
-                        Debug.Log($"[ModelDownloader] Progress: {(progress * 100):F1}% ({receivedBytes}/{totalBytes} bytes)");
-                    }
-                    OnDownloadProgress?.Invoke(progress);
-                    updateCount++;
-                }
+                    yieldCounter = 0;
 
-                yield return null;
+                    if (totalBytes > 0)
+                    {
+                        float progress = (float)receivedBytes / totalBytes;
+                        if (updateCount % 10 == 0) // Log every 10 progress updates
+                        {
+                            Debug.Log($"[ModelDownloader] Progress: {(progress * 100):F1}% ({receivedBytes}/{totalBytes} bytes)");
+                        }
+                        OnDownloadProgress?.Invoke(progress);
+                        updateCount++;
+                    }
+
+                    yield return null; // Only yield every YIELD_INTERVAL reads
+                }
             }
 
             try
@@ -333,6 +372,101 @@ namespace OfflineSpeechRecognition.Download
         /// Check if download is in progress
         /// </summary>
         public bool IsDownloading => _isDownloading;
+
+        /// <summary>
+        /// Calculate SHA1 checksum of a file
+        /// </summary>
+        private string CalculateFileSHA1(string filePath)
+        {
+            try
+            {
+                using (var sha1 = SHA1.Create())
+                {
+                    using (var fileStream = File.OpenRead(filePath))
+                    {
+                        byte[] hashBytes = sha1.ComputeHash(fileStream);
+                        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ModelDownloader.CalculateFileSHA1] Error calculating checksum: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Validate model file integrity using SHA1 checksum (fast version - only if needed)
+        /// </summary>
+        private bool ValidateModelIntegrity(WhisperModel model)
+        {
+            string expectedChecksum = model.GetExpectedChecksum();
+            if (string.IsNullOrEmpty(expectedChecksum))
+            {
+                Debug.LogWarning($"[ModelDownloader] No checksum available for {model.GetSizeString()}");
+                return true; // Skip validation if no checksum is available
+            }
+
+            if (!File.Exists(model.ModelPath))
+            {
+                Debug.LogError($"[ModelDownloader] Model file not found: {model.ModelPath}");
+                return false;
+            }
+
+            Debug.Log($"[ModelDownloader] Validating {model.GetSizeString()} checksum...");
+            string actualChecksum = CalculateFileSHA1(model.ModelPath);
+
+            if (actualChecksum == null)
+            {
+                Debug.LogError($"[ModelDownloader] Failed to calculate checksum for {model.GetSizeString()}");
+                return false;
+            }
+
+            bool isValid = actualChecksum.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
+            if (isValid)
+            {
+                Debug.Log($"[ModelDownloader] ✓ Checksum valid for {model.GetSizeString()}");
+            }
+            else
+            {
+                Debug.LogError($"[ModelDownloader] ✗ Checksum mismatch for {model.GetSizeString()}");
+                Debug.LogError($"  Expected: {expectedChecksum}");
+                Debug.LogError($"  Actual:   {actualChecksum}");
+            }
+
+            return isValid;
+        }
+
+        /// <summary>
+        /// Calculate SHA1 checksum while reading file (more efficient for large files)
+        /// </summary>
+        private string CalculateFileSHA1Optimized(string filePath)
+        {
+            try
+            {
+                using (var sha1 = SHA1.Create())
+                {
+                    using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, OPTIMAL_BUFFER_SIZE))
+                    {
+                        byte[] buffer = new byte[OPTIMAL_BUFFER_SIZE];
+                        int bytesRead;
+                        while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            sha1.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+                        }
+                        sha1.TransformFinalBlock(buffer, 0, 0);
+                        byte[] hashBytes = sha1.Hash;
+                        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ModelDownloader.CalculateFileSHA1Optimized] Error calculating checksum: {ex.Message}");
+                return null;
+            }
+        }
 
         /// <summary>
         /// Clean up resources

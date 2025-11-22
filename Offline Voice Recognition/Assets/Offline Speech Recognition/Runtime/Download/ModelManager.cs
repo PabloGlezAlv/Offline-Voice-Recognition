@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using UnityEngine;
 using OfflineSpeechRecognition.Core;
 
@@ -173,10 +174,10 @@ namespace OfflineSpeechRecognition.Download
                 var model = GetModel(size);
                 if (model != null && model.IsDownloaded)
                 {
-                    string directory = model.GetModelDirectory();
-                    if (Directory.Exists(directory))
+                    // Delete model file directly (not a directory)
+                    if (File.Exists(model.ModelPath))
                     {
-                        Directory.Delete(directory, true);
+                        File.Delete(model.ModelPath);
                         model.RefreshDownloadStatus();
                         Debug.Log($"Model {size} deleted successfully");
                         return true;
@@ -276,7 +277,38 @@ namespace OfflineSpeechRecognition.Download
         }
 
         /// <summary>
-        /// Validate a model file (check if it exists and is not corrupted)
+        /// Calculate SHA1 checksum of a file with optimized buffer
+        /// </summary>
+        private string CalculateFileSHA1(string filePath)
+        {
+            try
+            {
+                const int bufferSize = 262144; // 256 KB buffer for better performance
+                using (var sha1 = SHA1.Create())
+                {
+                    using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize))
+                    {
+                        byte[] buffer = new byte[bufferSize];
+                        int bytesRead;
+                        while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            sha1.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+                        }
+                        sha1.TransformFinalBlock(buffer, 0, 0);
+                        byte[] hashBytes = sha1.Hash;
+                        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ModelManager.CalculateFileSHA1] Error calculating checksum: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Validate a model file (check if it exists and verify integrity with SHA1 checksum)
         /// </summary>
         public bool ValidateModel(WhisperModel.ModelSize size)
         {
@@ -286,15 +318,40 @@ namespace OfflineSpeechRecognition.Download
                 // Check if file exists
                 if (File.Exists(model.ModelPath))
                 {
-                    // Try to get file size (basic validation)
                     try
                     {
                         var info = new FileInfo(model.ModelPath);
                         // Basic check: file should be larger than 10MB for any model
-                        return info.Length > 10 * 1024 * 1024;
+                        if (info.Length < 10 * 1024 * 1024)
+                        {
+                            Debug.LogWarning($"Model {size} file size is suspiciously small: {info.Length} bytes");
+                            return false;
+                        }
+
+                        // Validate checksum if available
+                        string expectedChecksum = model.GetExpectedChecksum();
+                        if (!string.IsNullOrEmpty(expectedChecksum))
+                        {
+                            string actualChecksum = CalculateFileSHA1(model.ModelPath);
+                            if (actualChecksum == null)
+                            {
+                                Debug.LogError($"Failed to calculate checksum for model {size}");
+                                return false;
+                            }
+
+                            bool isValid = actualChecksum.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
+                            if (!isValid)
+                            {
+                                Debug.LogError($"Model {size} checksum mismatch. Expected: {expectedChecksum}, Got: {actualChecksum}");
+                            }
+                            return isValid;
+                        }
+
+                        return true;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Debug.LogError($"Error validating model {size}: {ex.Message}");
                         return false;
                     }
                 }

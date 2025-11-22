@@ -209,7 +209,8 @@ namespace OfflineSpeechRecognition.Editor
         {
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Offline Speech Recognition - STT Engine", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Version 1.0.0", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField("Version 1.0.0 - GGML Models (whisper.cpp)", EditorStyles.miniLabel);
+            EditorGUILayout.HelpBox("Models sourced from ggerganov/whisper.cpp on Hugging Face. GGML format provides optimized inference.", MessageType.Info);
             EditorGUILayout.Space(5);
         }
 
@@ -303,9 +304,12 @@ namespace OfflineSpeechRecognition.Editor
                 // Model header with status
                 EditorGUILayout.BeginHorizontal();
                 {
-                    // Model name
+                    // Model name with filename
                     string modelName = model.GetSizeString().ToUpper();
-                    EditorGUILayout.LabelField(modelName, EditorStyles.boldLabel, GUILayout.Width(70));
+                    string filename = $"({model.FileName})";
+                    EditorGUILayout.LabelField($"{modelName} {filename}", EditorStyles.boldLabel);
+
+                    GUILayout.FlexibleSpace();
 
                     // Status badge
                     if (model.IsDownloaded)
@@ -322,11 +326,23 @@ namespace OfflineSpeechRecognition.Editor
                         EditorGUILayout.LabelField("✗ Not Downloaded", EditorStyles.miniLabel, GUILayout.Width(120));
                         GUI.backgroundColor = guiColor;
                     }
+                }
+                EditorGUILayout.EndHorizontal();
 
-                    // Size info
-                    EditorGUILayout.LabelField(model.GetReadableSize(), EditorStyles.miniLabel, GUILayout.Width(90));
+                // Model info row
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField($"Size: {model.GetReadableSize()}", EditorStyles.miniLabel);
 
-                    GUILayout.FlexibleSpace();
+                    // Show checksum info if model is downloaded
+                    if (model.IsDownloaded)
+                    {
+                        string checksum = model.GetExpectedChecksum();
+                        if (!string.IsNullOrEmpty(checksum))
+                        {
+                            EditorGUILayout.LabelField($"Checksum: {checksum.Substring(0, 8)}...", EditorStyles.miniLabel);
+                        }
+                    }
                 }
                 EditorGUILayout.EndHorizontal();
 

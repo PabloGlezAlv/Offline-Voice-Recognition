@@ -51,7 +51,7 @@ namespace OfflineSpeechRecognition.Examples
                 { "stop", () => { Debug.Log(">> Command: STOP executed"); isRecording = false; } },
                 { "status", () => LogModelStatus() },
                 { "download tiny", () => DownloadModel(WhisperModel.ModelSize.Tiny) },
-                { "download base", () => DownloadModel(WhisperModel.ModelSize.Base) },
+                { "download medium", () => DownloadModel(WhisperModel.ModelSize.Medium) },
                 { "download small", () => DownloadModel(WhisperModel.ModelSize.Small) },
             };
         }

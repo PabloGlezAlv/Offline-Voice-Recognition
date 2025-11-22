@@ -11,15 +11,15 @@ namespace OfflineSpeechRecognition.Core
     public class WhisperModel
     {
         /// <summary>
-        /// Available Whisper model sizes
+        /// Available Whisper model sizes (GGML format from ggerganov/whisper.cpp)
         /// </summary>
         public enum ModelSize
         {
-            Tiny,    // ~140 MB
-            Base,    // ~290 MB
-            Small,   // ~770 MB
-            Medium,  // ~1.5 GB
-            Large    // ~3.1 GB
+            Tiny,           // ~77.7 MB (ggml-tiny.bin)
+            Small,          // ~488 MB (ggml-small.bin)
+            Medium,         // ~1.53 GB (ggml-medium.bin)
+            LargeV3,        // ~3.1 GB (ggml-large-v3.bin) - Recommended for high accuracy
+            LargeV3Turbo    // ~1.62 GB (ggml-large-v3-turbo.bin) - Faster inference
         }
 
         /// <summary>
@@ -28,9 +28,9 @@ namespace OfflineSpeechRecognition.Core
         public ModelSize Size { get; private set; }
 
         /// <summary>
-        /// The folder name of the model (e.g., "whisper-tiny")
+        /// The filename of the model (e.g., "ggml-tiny.bin")
         /// </summary>
-        public string FolderName { get; private set; }
+        public string FileName { get; private set; }
 
         /// <summary>
         /// Full path to the model file
@@ -53,23 +53,23 @@ namespace OfflineSpeechRecognition.Core
         public WhisperModel(ModelSize size)
         {
             Size = size;
-            FolderName = $"whisper-{GetSizeString()}";
+            FileName = $"ggml-{GetSizeString()}.bin";
             UpdatePath();
             RefreshDownloadStatus();
         }
 
         /// <summary>
-        /// Get the string representation of the model size
+        /// Get the string representation of the model size (GGML format)
         /// </summary>
         public string GetSizeString()
         {
             return Size switch
             {
                 ModelSize.Tiny => "tiny",
-                ModelSize.Base => "base",
                 ModelSize.Small => "small",
                 ModelSize.Medium => "medium",
-                ModelSize.Large => "large",
+                ModelSize.LargeV3 => "large-v3",
+                ModelSize.LargeV3Turbo => "large-v3-turbo",
                 _ => "unknown"
             };
         }
@@ -90,12 +90,22 @@ namespace OfflineSpeechRecognition.Core
         /// </summary>
         public string GetDownloadUrl()
         {
-            string baseUrl = string.Format(
-                Utilities.Constants.HUGGINGFACE_BASE_URL,
-                GetSizeString()
-            );
+            string sizeString = GetSizeString();
+            string filename = string.Format(Utilities.Constants.WHISPER_MODEL_FILENAME, sizeString);
+            return Utilities.Constants.HUGGINGFACE_BASE_URL + filename;
+        }
 
-            return baseUrl + Utilities.Constants.WHISPER_MODEL_FILENAME;
+        /// <summary>
+        /// Get the expected SHA1 checksum for this model
+        /// </summary>
+        public string GetExpectedChecksum()
+        {
+            string sizeString = GetSizeString();
+            if (Utilities.Constants.MODEL_CHECKSUMS.TryGetValue(sizeString, out var checksum))
+            {
+                return checksum;
+            }
+            return null;
         }
 
         /// <summary>
@@ -108,10 +118,10 @@ namespace OfflineSpeechRecognition.Core
                 Utilities.Constants.MODELS_FOLDER_NAME
             );
 
+            // Store model directly in Models folder with GGML filename
             ModelPath = Path.Combine(
                 modelsFolder,
-                FolderName,
-                "model.onnx"
+                FileName
             );
         }
 

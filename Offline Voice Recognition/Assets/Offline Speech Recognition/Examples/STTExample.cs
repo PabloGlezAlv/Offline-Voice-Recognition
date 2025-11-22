@@ -198,10 +198,22 @@ namespace OfflineSpeechRecognition.Examples
                 PrintStatus();
             }
 
-            // Press 'D' to download base model (for testing)
+            // Press 'D' to download small model (for testing)
             if (Input.GetKeyDown(KeyCode.D))
             {
-                DownloadModel(WhisperModel.ModelSize.Base);
+                DownloadModel(WhisperModel.ModelSize.Small);
+            }
+
+            // Press 'T' to download tiny model (smallest/fastest)
+            if (Input.GetKeyDown(KeyCode.T))
+            {
+                DownloadModel(WhisperModel.ModelSize.Tiny);
+            }
+
+            // Press 'L' to download large model (best quality)
+            if (Input.GetKeyDown(KeyCode.L))
+            {
+                DownloadModel(WhisperModel.ModelSize.LargeV3);
             }
         }
 

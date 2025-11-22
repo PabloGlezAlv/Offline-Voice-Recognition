@@ -15,7 +15,7 @@ namespace OfflineSpeechRecognition.Core
     [AddComponentMenu("Offline Speech Recognition/STT Engine")]
     public class STTEngine : MonoBehaviour
     {
-        [SerializeField] private WhisperModel.ModelSize selectedModel = WhisperModel.ModelSize.Base;
+        [SerializeField] private WhisperModel.ModelSize selectedModel = WhisperModel.ModelSize.Small;
         [SerializeField] private WhisperLanguage selectedLanguage = WhisperLanguage.English;
         [SerializeField] private bool autoDownloadModels = false;
 
@@ -38,6 +38,47 @@ namespace OfflineSpeechRecognition.Core
         private void Awake()
         {
             Initialize();
+        }
+
+        /// <summary>
+        /// Initialize the STT Engine for editor mode (downloads only)
+        /// </summary>
+        public void InitializeForEditor()
+        {
+            try
+            {
+                Debug.Log("[STTEngine.InitializeForEditor] Initializing for editor mode...");
+
+                // Get or create model manager
+                if (_modelManager == null)
+                {
+                    _modelManager = ModelManager.Instance;
+                }
+
+                // Get the current model
+                if (_currentModel == null)
+                {
+                    _currentModel = _modelManager.GetModel(selectedModel);
+                }
+
+                // Create model downloader if it doesn't exist
+                if (_modelDownloader == null)
+                {
+                    var downloaderObj = new GameObject("ModelDownloader");
+                    downloaderObj.transform.SetParent(transform);
+                    _modelDownloader = downloaderObj.AddComponent<ModelDownloader>();
+                    _modelDownloader.OnDownloadProgress += OnDownloadProgress;
+                    _modelDownloader.OnDownloadError += OnError;
+                    Debug.Log("[STTEngine.InitializeForEditor] Created ModelDownloader");
+                }
+
+                Debug.Log("[STTEngine.InitializeForEditor] Editor initialization complete");
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke($"Failed to initialize STT Engine for editor: {ex.Message}");
+                Debug.LogError($"STT Engine editor initialization failed: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -278,19 +319,52 @@ namespace OfflineSpeechRecognition.Core
         /// </summary>
         public void DownloadModel(WhisperModel.ModelSize size)
         {
-            if (!_isInitialized)
+            Debug.Log($"[STTEngine.DownloadModel] Called with size: {size}, IsInitialized: {_isInitialized}");
+
+            // For editor downloads, initialize if needed
+            #if UNITY_EDITOR
+            if (_modelManager == null || _modelDownloader == null)
             {
-                OnError?.Invoke("STT Engine not initialized");
+                Debug.Log("[STTEngine.DownloadModel] Detected editor mode without initialization, calling InitializeForEditor...");
+                InitializeForEditor();
+            }
+            #endif
+
+            // Now check if we have ModelManager
+            if (_modelManager == null)
+            {
+                string errorMsg = "ModelManager not initialized";
+                OnError?.Invoke(errorMsg);
+                Debug.LogError($"[STTEngine.DownloadModel] {errorMsg}");
                 return;
             }
 
             var model = _modelManager.GetModel(size);
-            if (model.IsDownloaded)
+            if (model == null)
             {
-                OnError?.Invoke($"Model {size} already downloaded");
+                string errorMsg = $"Model {size} not found";
+                OnError?.Invoke(errorMsg);
+                Debug.LogError($"[STTEngine.DownloadModel] {errorMsg}");
                 return;
             }
 
+            if (model.IsDownloaded)
+            {
+                string errorMsg = $"Model {size} already downloaded";
+                OnError?.Invoke(errorMsg);
+                Debug.Log($"[STTEngine.DownloadModel] {errorMsg}");
+                return;
+            }
+
+            if (_modelDownloader == null)
+            {
+                string errorMsg = "ModelDownloader is null";
+                OnError?.Invoke(errorMsg);
+                Debug.LogError($"[STTEngine.DownloadModel] {errorMsg}");
+                return;
+            }
+
+            Debug.Log($"[STTEngine.DownloadModel] Starting download for {size}");
             _modelDownloader.StartDownload(model);
         }
 
