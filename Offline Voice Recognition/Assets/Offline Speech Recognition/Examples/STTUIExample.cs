@@ -9,7 +9,7 @@ namespace OfflineSpeechRecognition.Examples
     /// <summary>
     /// Example that displays STT results in TextMeshPro UI
     /// Shows real-time transcription, status, and error messages
-    /// Can auto-generate UI structure from context menu
+    /// Requires manual UI setup with Button, Dropdown, and TextMeshProUGUI components
     /// </summary>
     public class STTUIExample : MonoBehaviour
     {
@@ -22,12 +22,12 @@ namespace OfflineSpeechRecognition.Examples
         private float recordingStartTime = 0f;
 
         // UI Components
-        private Button recordButton;
-        private Button cancelButton;
-        private TextMeshProUGUI recordButtonText;
-        private TMP_Dropdown microphoneDropdown;
-        private TMP_Dropdown modelDropdown;
-        private TMP_Dropdown languageDropdown;
+        [SerializeField] private Button recordButton;
+        [SerializeField] private Button cancelButton;
+        [SerializeField] private TextMeshProUGUI recordButtonText;
+        [SerializeField] private TMP_Dropdown microphoneDropdown;
+        [SerializeField] private TMP_Dropdown modelDropdown;
+        [SerializeField] private TMP_Dropdown languageDropdown;
 
         private void Start()
         {
@@ -102,547 +102,6 @@ namespace OfflineSpeechRecognition.Examples
                 PopulateLanguageDropdown();
                 languageDropdown.onValueChanged.AddListener(OnLanguageSelected);
             }
-        }
-
-        /// <summary>
-        /// Generate UI structure automatically via context menu
-        /// </summary>
-        [ContextMenu("Generate UI")]
-        private void GenerateUI()
-        {
-            Debug.Log("Generating UI structure...");
-
-            // Find or create Canvas
-            Canvas canvas = FindObjectOfType<Canvas>();
-            if (canvas == null)
-            {
-                GameObject canvasObj = new GameObject("STTCanvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-                CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-
-                GraphicRaycaster raycaster = canvasObj.AddComponent<GraphicRaycaster>();
-            }
-
-            // Create or find main panel
-            Transform panelTransform = canvas.transform.Find("STTPanel");
-            GameObject panelObj;
-            if (panelTransform == null)
-            {
-                panelObj = new GameObject("STTPanel");
-                panelObj.transform.SetParent(canvas.transform, false);
-                RectTransform panelRect = panelObj.AddComponent<RectTransform>();
-                panelRect.anchorMin = Vector2.zero;
-                panelRect.anchorMax = Vector2.one;
-                panelRect.offsetMin = Vector2.zero;
-                panelRect.offsetMax = Vector2.zero;
-
-                Image panelImage = panelObj.AddComponent<Image>();
-                panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-            }
-            else
-            {
-                panelObj = panelTransform.gameObject;
-            }
-
-            // Clear existing children to regenerate
-            foreach (Transform child in panelObj.transform)
-            {
-                DestroyImmediate(child.gameObject);
-            }
-
-            // Create vertical layout group
-            VerticalLayoutGroup vlg = panelObj.GetComponent<VerticalLayoutGroup>();
-            if (vlg == null)
-            {
-                vlg = panelObj.AddComponent<VerticalLayoutGroup>();
-            }
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-            vlg.spacing = 10f;
-            vlg.padding = new RectOffset(20, 20, 20, 20);
-
-            // 1. Recording Control Section
-            CreateRecordingSection(panelObj);
-
-            // 2. Microphone Selection
-            CreateMicrophoneDropdown(panelObj);
-
-            // 3. Model Selection
-            CreateModelDropdown(panelObj);
-
-            // 4. Language Selection
-            CreateLanguageDropdown(panelObj);
-
-            // 5. Transcription Text Area
-            CreateTranscriptionArea(panelObj);
-
-            // 6. Status Text Area
-            CreateStatusArea(panelObj);
-
-            // 7. Model Info Area
-            CreateModelInfoArea(panelObj);
-
-            // Auto-assign STTEngine if not assigned
-            if (sttEngine == null)
-            {
-                sttEngine = FindObjectOfType<STTEngine>();
-                if (sttEngine != null)
-                {
-                    Debug.Log("STTEngine auto-assigned");
-                }
-            }
-
-            Debug.Log("UI generation complete!");
-        }
-
-        private void CreateRecordingSection(GameObject parent)
-        {
-            GameObject sectionObj = new GameObject("RecordingSection");
-            sectionObj.transform.SetParent(parent.transform, false);
-            RectTransform sectionRect = sectionObj.AddComponent<RectTransform>();
-            sectionRect.sizeDelta = new Vector2(0, 80);
-
-            HorizontalLayoutGroup hlg = sectionObj.AddComponent<HorizontalLayoutGroup>();
-            hlg.childForceExpandWidth = true;
-            hlg.childForceExpandHeight = true;
-            hlg.spacing = 10f;
-
-            // Record button
-            GameObject recordBtnObj = new GameObject("RecordButton");
-            recordBtnObj.transform.SetParent(sectionObj.transform, false);
-            RectTransform recordBtnRect = recordBtnObj.AddComponent<RectTransform>();
-            recordBtnRect.sizeDelta = new Vector2(150, 60);
-
-            Image recordBtnImage = recordBtnObj.AddComponent<Image>();
-            recordBtnImage.color = new Color(0.2f, 0.7f, 0.2f, 1f);
-
-            recordButton = recordBtnObj.AddComponent<Button>();
-            recordButton.targetGraphic = recordBtnImage;
-
-            ColorBlock colors = recordButton.colors;
-            colors.normalColor = new Color(0.2f, 0.7f, 0.2f, 1f);
-            colors.highlightedColor = new Color(0.3f, 0.8f, 0.3f, 1f);
-            colors.pressedColor = new Color(0.15f, 0.6f, 0.15f, 1f);
-            recordButton.colors = colors;
-
-            recordButtonText = recordBtnObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(recordButtonText, "Start Recording", TextAlignmentOptions.Center, 28);
-
-            // Cancel button
-            GameObject cancelBtnObj = new GameObject("CancelButton");
-            cancelBtnObj.transform.SetParent(sectionObj.transform, false);
-            RectTransform cancelBtnRect = cancelBtnObj.AddComponent<RectTransform>();
-            cancelBtnRect.sizeDelta = new Vector2(150, 60);
-
-            Image cancelBtnImage = cancelBtnObj.AddComponent<Image>();
-            cancelBtnImage.color = new Color(0.7f, 0.2f, 0.2f, 1f);
-
-            cancelButton = cancelBtnObj.AddComponent<Button>();
-            cancelButton.targetGraphic = cancelBtnImage;
-
-            ColorBlock cancelColors = cancelButton.colors;
-            cancelColors.normalColor = new Color(0.7f, 0.2f, 0.2f, 1f);
-            cancelColors.highlightedColor = new Color(0.8f, 0.3f, 0.3f, 1f);
-            cancelColors.pressedColor = new Color(0.6f, 0.15f, 0.15f, 1f);
-            cancelButton.colors = cancelColors;
-
-            TextMeshProUGUI cancelBtnText = cancelBtnObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(cancelBtnText, "Cancel", TextAlignmentOptions.Center, 28);
-        }
-
-        private void CreateMicrophoneDropdown(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("MicrophoneContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 60);
-
-            // Label
-            GameObject labelObj = new GameObject("Label");
-            labelObj.transform.SetParent(containerObj.transform, false);
-            RectTransform labelRect = labelObj.AddComponent<RectTransform>();
-            labelRect.sizeDelta = new Vector2(150, 30);
-            labelRect.anchoredPosition = new Vector2(-200, 15);
-
-            TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(labelText, "Microphone:", TextAlignmentOptions.Left, 20);
-
-            // Dropdown
-            GameObject dropdownObj = new GameObject("MicrophoneDropdown");
-            dropdownObj.transform.SetParent(containerObj.transform, false);
-            RectTransform dropdownRect = dropdownObj.AddComponent<RectTransform>();
-            dropdownRect.sizeDelta = new Vector2(0, 40);
-
-            Image dropdownImage = dropdownObj.AddComponent<Image>();
-            dropdownImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            microphoneDropdown = dropdownObj.AddComponent<TMP_Dropdown>();
-
-            // Create template for dropdown
-            GameObject templateObj = new GameObject("Template");
-            templateObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform templateRect = templateObj.AddComponent<RectTransform>();
-            templateRect.anchorMin = new Vector2(0, 0);
-            templateRect.anchorMax = new Vector2(1, 0);
-            templateRect.offsetMin = new Vector2(0, 0);
-            templateRect.offsetMax = new Vector2(0, 150);
-
-            Image templateImage = templateObj.AddComponent<Image>();
-            templateImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            ScrollRect scrollRect = templateObj.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-
-            GameObject contentObj = new GameObject("Content");
-            contentObj.transform.SetParent(templateObj.transform, false);
-            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0, 1);
-            contentRect.anchorMax = new Vector2(1, 1);
-            contentRect.sizeDelta = new Vector2(0, 200);
-
-            VerticalLayoutGroup contentVLG = contentObj.AddComponent<VerticalLayoutGroup>();
-            contentVLG.childForceExpandWidth = true;
-            contentVLG.spacing = 0;
-
-            scrollRect.content = contentRect;
-
-            GameObject itemObj = new GameObject("Item");
-            itemObj.transform.SetParent(contentObj.transform, false);
-            RectTransform itemRect = itemObj.AddComponent<RectTransform>();
-            itemRect.sizeDelta = new Vector2(0, 30);
-
-            Toggle itemToggle = itemObj.AddComponent<Toggle>();
-            ToggleGroup tg = contentObj.AddComponent<ToggleGroup>();
-            itemToggle.group = tg;
-
-            Image itemImage = itemObj.AddComponent<Image>();
-            itemImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            GameObject labelItemObj = new GameObject("Label");
-            labelItemObj.transform.SetParent(itemObj.transform, false);
-            RectTransform labelItemRect = labelItemObj.AddComponent<RectTransform>();
-            labelItemRect.anchorMin = Vector2.zero;
-            labelItemRect.anchorMax = Vector2.one;
-            labelItemRect.offsetMin = new Vector2(20, 0);
-            labelItemRect.offsetMax = Vector2.zero;
-
-            TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
-
-            microphoneDropdown.template = templateRect;
-
-            // Create caption text
-            GameObject captionObj = new GameObject("Label");
-            captionObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform captionRect = captionObj.AddComponent<RectTransform>();
-            captionRect.anchorMin = Vector2.zero;
-            captionRect.anchorMax = Vector2.one;
-            captionRect.offsetMin = new Vector2(10, 0);
-            captionRect.offsetMax = new Vector2(-10, 0);
-
-            TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(captionText, "Select Microphone", TextAlignmentOptions.Left, 20);
-
-            microphoneDropdown.captionText = captionText;
-        }
-
-        private void CreateModelDropdown(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("ModelContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 60);
-
-            // Label
-            GameObject labelObj = new GameObject("Label");
-            labelObj.transform.SetParent(containerObj.transform, false);
-            RectTransform labelRect = labelObj.AddComponent<RectTransform>();
-            labelRect.sizeDelta = new Vector2(150, 30);
-            labelRect.anchoredPosition = new Vector2(-200, 15);
-
-            TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
-            labelText.text = "Model:";
-            labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.Left;
-
-            // Dropdown
-            GameObject dropdownObj = new GameObject("ModelDropdown");
-            dropdownObj.transform.SetParent(containerObj.transform, false);
-            RectTransform dropdownRect = dropdownObj.AddComponent<RectTransform>();
-            dropdownRect.sizeDelta = new Vector2(0, 40);
-
-            Image dropdownImage = dropdownObj.AddComponent<Image>();
-            dropdownImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            modelDropdown = dropdownObj.AddComponent<TMP_Dropdown>();
-
-            // Create template
-            GameObject templateObj = new GameObject("Template");
-            templateObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform templateRect = templateObj.AddComponent<RectTransform>();
-            templateRect.anchorMin = new Vector2(0, 0);
-            templateRect.anchorMax = new Vector2(1, 0);
-            templateRect.offsetMin = new Vector2(0, 0);
-            templateRect.offsetMax = new Vector2(0, 150);
-
-            Image templateImage = templateObj.AddComponent<Image>();
-            templateImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            ScrollRect scrollRect = templateObj.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-
-            GameObject contentObj = new GameObject("Content");
-            contentObj.transform.SetParent(templateObj.transform, false);
-            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0, 1);
-            contentRect.anchorMax = new Vector2(1, 1);
-            contentRect.sizeDelta = new Vector2(0, 200);
-
-            VerticalLayoutGroup contentVLG = contentObj.AddComponent<VerticalLayoutGroup>();
-            contentVLG.childForceExpandWidth = true;
-            contentVLG.spacing = 0;
-
-            scrollRect.content = contentRect;
-
-            GameObject itemObj = new GameObject("Item");
-            itemObj.transform.SetParent(contentObj.transform, false);
-            RectTransform itemRect = itemObj.AddComponent<RectTransform>();
-            itemRect.sizeDelta = new Vector2(0, 30);
-
-            Toggle itemToggle = itemObj.AddComponent<Toggle>();
-            ToggleGroup tg = contentObj.AddComponent<ToggleGroup>();
-            itemToggle.group = tg;
-
-            Image itemImage = itemObj.AddComponent<Image>();
-            itemImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            GameObject labelItemObj = new GameObject("Label");
-            labelItemObj.transform.SetParent(itemObj.transform, false);
-            RectTransform labelItemRect = labelItemObj.AddComponent<RectTransform>();
-            labelItemRect.anchorMin = Vector2.zero;
-            labelItemRect.anchorMax = Vector2.one;
-            labelItemRect.offsetMin = new Vector2(20, 0);
-            labelItemRect.offsetMax = Vector2.zero;
-
-            TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
-
-            modelDropdown.template = templateRect;
-
-            // Caption
-            GameObject captionObj = new GameObject("Label");
-            captionObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform captionRect = captionObj.AddComponent<RectTransform>();
-            captionRect.anchorMin = Vector2.zero;
-            captionRect.anchorMax = Vector2.one;
-            captionRect.offsetMin = new Vector2(10, 0);
-            captionRect.offsetMax = new Vector2(-10, 0);
-
-            TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
-            captionText.text = "Select Model";
-            captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.Left;
-
-            modelDropdown.captionText = captionText;
-        }
-
-        private void CreateLanguageDropdown(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("LanguageContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 60);
-
-            // Label
-            GameObject labelObj = new GameObject("Label");
-            labelObj.transform.SetParent(containerObj.transform, false);
-            RectTransform labelRect = labelObj.AddComponent<RectTransform>();
-            labelRect.sizeDelta = new Vector2(150, 30);
-            labelRect.anchoredPosition = new Vector2(-200, 15);
-
-            TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
-            labelText.text = "Language:";
-            labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.Left;
-
-            // Dropdown
-            GameObject dropdownObj = new GameObject("LanguageDropdown");
-            dropdownObj.transform.SetParent(containerObj.transform, false);
-            RectTransform dropdownRect = dropdownObj.AddComponent<RectTransform>();
-            dropdownRect.sizeDelta = new Vector2(0, 40);
-
-            Image dropdownImage = dropdownObj.AddComponent<Image>();
-            dropdownImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            languageDropdown = dropdownObj.AddComponent<TMP_Dropdown>();
-
-            // Create template
-            GameObject templateObj = new GameObject("Template");
-            templateObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform templateRect = templateObj.AddComponent<RectTransform>();
-            templateRect.anchorMin = new Vector2(0, 0);
-            templateRect.anchorMax = new Vector2(1, 0);
-            templateRect.offsetMin = new Vector2(0, 0);
-            templateRect.offsetMax = new Vector2(0, 150);
-
-            Image templateImage = templateObj.AddComponent<Image>();
-            templateImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-            ScrollRect scrollRect = templateObj.AddComponent<ScrollRect>();
-            scrollRect.horizontal = false;
-
-            GameObject contentObj = new GameObject("Content");
-            contentObj.transform.SetParent(templateObj.transform, false);
-            RectTransform contentRect = contentObj.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0, 1);
-            contentRect.anchorMax = new Vector2(1, 1);
-            contentRect.sizeDelta = new Vector2(0, 200);
-
-            VerticalLayoutGroup contentVLG = contentObj.AddComponent<VerticalLayoutGroup>();
-            contentVLG.childForceExpandWidth = true;
-            contentVLG.spacing = 0;
-
-            scrollRect.content = contentRect;
-
-            GameObject itemObj = new GameObject("Item");
-            itemObj.transform.SetParent(contentObj.transform, false);
-            RectTransform itemRect = itemObj.AddComponent<RectTransform>();
-            itemRect.sizeDelta = new Vector2(0, 30);
-
-            Toggle itemToggle = itemObj.AddComponent<Toggle>();
-            ToggleGroup tg = contentObj.AddComponent<ToggleGroup>();
-            itemToggle.group = tg;
-
-            Image itemImage = itemObj.AddComponent<Image>();
-            itemImage.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            GameObject labelItemObj = new GameObject("Label");
-            labelItemObj.transform.SetParent(itemObj.transform, false);
-            RectTransform labelItemRect = labelItemObj.AddComponent<RectTransform>();
-            labelItemRect.anchorMin = Vector2.zero;
-            labelItemRect.anchorMax = Vector2.one;
-            labelItemRect.offsetMin = new Vector2(20, 0);
-            labelItemRect.offsetMax = Vector2.zero;
-
-            TextMeshProUGUI labelItemText = labelItemObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(labelItemText, "Option A", TextAlignmentOptions.Left, 18);
-
-            languageDropdown.template = templateRect;
-
-            // Caption
-            GameObject captionObj = new GameObject("Label");
-            captionObj.transform.SetParent(dropdownObj.transform, false);
-            RectTransform captionRect = captionObj.AddComponent<RectTransform>();
-            captionRect.anchorMin = Vector2.zero;
-            captionRect.anchorMax = Vector2.one;
-            captionRect.offsetMin = new Vector2(10, 0);
-            captionRect.offsetMax = new Vector2(-10, 0);
-
-            TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
-            captionText.text = "Select Language";
-            captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.Left;
-
-            languageDropdown.captionText = captionText;
-        }
-
-        private void CreateTranscriptionArea(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("TranscriptionContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 150);
-
-            // Title
-            GameObject titleObj = new GameObject("Title");
-            titleObj.transform.SetParent(containerObj.transform, false);
-            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-            titleRect.sizeDelta = new Vector2(0, 25);
-
-            TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(titleText, "Transcription:", TextAlignmentOptions.Left, 20);
-
-            // Text area
-            GameObject textObj = new GameObject("TranscriptionText");
-            textObj.transform.SetParent(containerObj.transform, false);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(0, 120);
-
-            Image textImage = textObj.AddComponent<Image>();
-            textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-
-            transcriptionText = textObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(transcriptionText, "Transcription will appear here...", TextAlignmentOptions.TopLeft, 18);
-
-            LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
-            textLayoutElement.preferredHeight = 120;
-        }
-
-        private void CreateStatusArea(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("StatusContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 60);
-
-            // Title
-            GameObject titleObj = new GameObject("Title");
-            titleObj.transform.SetParent(containerObj.transform, false);
-            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-            titleRect.sizeDelta = new Vector2(0, 25);
-
-            TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(titleText, "Status:", TextAlignmentOptions.Left, 20);
-
-            // Text area
-            GameObject textObj = new GameObject("StatusText");
-            textObj.transform.SetParent(containerObj.transform, false);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(0, 35);
-
-            Image textImage = textObj.AddComponent<Image>();
-            textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-
-            statusText = textObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(statusText, "Ready", TextAlignmentOptions.Left, 18);
-
-            LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
-            textLayoutElement.preferredHeight = 35;
-        }
-
-        private void CreateModelInfoArea(GameObject parent)
-        {
-            GameObject containerObj = new GameObject("ModelInfoContainer");
-            containerObj.transform.SetParent(parent.transform, false);
-            RectTransform containerRect = containerObj.AddComponent<RectTransform>();
-            containerRect.sizeDelta = new Vector2(0, 80);
-
-            // Title
-            GameObject titleObj = new GameObject("Title");
-            titleObj.transform.SetParent(containerObj.transform, false);
-            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-            titleRect.sizeDelta = new Vector2(0, 25);
-
-            TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(titleText, "Model Info:", TextAlignmentOptions.Left, 20);
-
-            // Text area
-            GameObject textObj = new GameObject("ModelInfoText");
-            textObj.transform.SetParent(containerObj.transform, false);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(0, 55);
-
-            Image textImage = textObj.AddComponent<Image>();
-            textImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-
-            modelInfoText = textObj.AddComponent<TextMeshProUGUI>();
-            SetupTextMeshPro(modelInfoText, "Model info will appear here...", TextAlignmentOptions.TopLeft, 16);
-
-            LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
-            textLayoutElement.preferredHeight = 55;
         }
 
         private void PopulateMicrophoneDropdown()
@@ -944,5 +403,295 @@ namespace OfflineSpeechRecognition.Examples
                 sttEngine.OnDownloadProgress -= HandleDownloadProgress;
             }
         }
+
+#if UNITY_EDITOR
+        [ContextMenu("Generate UI")]
+        public void GenerateUI()
+        {
+            // 1. Find or Create Canvas
+            Canvas canvas = FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                GameObject canvasObj = new GameObject("Canvas");
+                canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+
+            // 2. Create Main Panel
+            GameObject panelObj = new GameObject("STT_Panel");
+            panelObj.transform.SetParent(canvas.transform, false);
+            RectTransform panelRect = panelObj.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(800, 600);
+            
+            Image panelImage = panelObj.AddComponent<Image>();
+            panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+
+            // Vertical Layout for Panel
+            VerticalLayoutGroup layout = panelObj.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(20, 20, 20, 20);
+            layout.spacing = 15;
+            layout.childControlHeight = false;
+            layout.childForceExpandHeight = false;
+
+            // 3. Create Header
+            CreateText(panelObj, "Offline Speech Recognition", 32, TextAlignmentOptions.Center, true);
+
+            // 4. Create Status Text
+            statusText = CreateText(panelObj, "Ready", 18, TextAlignmentOptions.Left);
+            
+            // 5. Create Model Info Text
+            modelInfoText = CreateText(panelObj, "Model Info...", 14, TextAlignmentOptions.Left);
+
+            // 6. Create Controls Container (Horizontal)
+            GameObject controlsObj = new GameObject("Controls");
+            controlsObj.transform.SetParent(panelObj.transform, false);
+            RectTransform controlsRect = controlsObj.AddComponent<RectTransform>();
+            controlsRect.sizeDelta = new Vector2(0, 40);
+            HorizontalLayoutGroup controlsLayout = controlsObj.AddComponent<HorizontalLayoutGroup>();
+            controlsLayout.spacing = 10;
+            controlsLayout.childControlWidth = true;
+            controlsLayout.childForceExpandWidth = true;
+
+            // 7. Create Dropdowns
+            microphoneDropdown = CreateDropdown(controlsObj, "Microphone");
+            modelDropdown = CreateDropdown(controlsObj, "Model");
+            languageDropdown = CreateDropdown(controlsObj, "Language");
+
+            // 8. Create Buttons Container
+            GameObject buttonsObj = new GameObject("Buttons");
+            buttonsObj.transform.SetParent(panelObj.transform, false);
+            RectTransform buttonsRect = buttonsObj.AddComponent<RectTransform>();
+            buttonsRect.sizeDelta = new Vector2(0, 50);
+            HorizontalLayoutGroup buttonsLayout = buttonsObj.AddComponent<HorizontalLayoutGroup>();
+            buttonsLayout.spacing = 20;
+            buttonsLayout.childControlWidth = false;
+            buttonsLayout.childForceExpandWidth = false;
+            buttonsLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            // 9. Create Record Button
+            recordButton = CreateButton(buttonsObj, "Start Recording", out recordButtonText);
+            
+            // 10. Create Cancel Button
+            cancelButton = CreateButton(buttonsObj, "Cancel", out TextMeshProUGUI cancelText);
+            cancelButton.image.color = new Color(0.8f, 0.2f, 0.2f);
+            cancelButton.gameObject.SetActive(false);
+
+            // 11. Create Transcription Text Area
+            GameObject scrollObj = new GameObject("Scroll View");
+            scrollObj.transform.SetParent(panelObj.transform, false);
+            RectTransform scrollRect = scrollObj.AddComponent<RectTransform>();
+            scrollRect.sizeDelta = new Vector2(0, 300); // Remaining height
+            
+            // Add Layout Element to fill remaining space if needed, but fixed height is fine for now
+            LayoutElement scrollLayoutElement = scrollObj.AddComponent<LayoutElement>();
+            scrollLayoutElement.minHeight = 200;
+            scrollLayoutElement.flexibleHeight = 1;
+
+            Image scrollImage = scrollObj.AddComponent<Image>();
+            scrollImage.color = new Color(0, 0, 0, 0.5f);
+
+            GameObject viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(scrollObj.transform, false);
+            RectTransform viewportRect = viewport.AddComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.sizeDelta = Vector2.zero;
+            viewport.AddComponent<RectMask2D>();
+
+            GameObject content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            RectTransform contentRect = content.AddComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0, 1);
+            contentRect.anchorMax = new Vector2(1, 1);
+            contentRect.pivot = new Vector2(0.5f, 1);
+            contentRect.sizeDelta = new Vector2(0, 300);
+
+            transcriptionText = CreateText(content, "Transcription will appear here...", 18, TextAlignmentOptions.TopLeft);
+            transcriptionText.rectTransform.anchorMin = Vector2.zero;
+            transcriptionText.rectTransform.anchorMax = Vector2.one;
+            transcriptionText.rectTransform.sizeDelta = Vector2.zero;
+            transcriptionText.enableWordWrapping = true;
+
+            ScrollRect scrollRectComp = scrollObj.AddComponent<ScrollRect>();
+            scrollRectComp.content = contentRect;
+            scrollRectComp.viewport = viewportRect;
+            scrollRectComp.movementType = ScrollRect.MovementType.Elastic;
+
+            // 12. Assign STTEngine if missing
+            if (sttEngine == null)
+            {
+                sttEngine = FindObjectOfType<STTEngine>();
+                if (sttEngine == null)
+                {
+                    // Create one if it doesn't exist
+                    GameObject engineObj = new GameObject("STT_Engine");
+                    sttEngine = engineObj.AddComponent<STTEngine>();
+                    Debug.Log("Created new STTEngine GameObject");
+                }
+            }
+
+            Debug.Log("UI Generated Successfully!");
+            
+            // Mark scene dirty to save changes
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        private TextMeshProUGUI CreateText(GameObject parent, string content, int fontSize, TextAlignmentOptions alignment, bool bold = false)
+        {
+            GameObject textObj = new GameObject("Text");
+            textObj.transform.SetParent(parent.transform, false);
+            TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
+            text.text = content;
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = Color.white;
+            if (bold) text.fontStyle = FontStyles.Bold;
+            return text;
+        }
+
+        private Button CreateButton(GameObject parent, string label, out TextMeshProUGUI buttonText)
+        {
+            GameObject btnObj = new GameObject("Button");
+            btnObj.transform.SetParent(parent.transform, false);
+            
+            Image btnImage = btnObj.AddComponent<Image>();
+            btnImage.color = new Color(0.2f, 0.6f, 1.0f);
+
+            Button btn = btnObj.AddComponent<Button>();
+            btn.targetGraphic = btnImage;
+
+            RectTransform btnRect = btnObj.GetComponent<RectTransform>();
+            btnRect.sizeDelta = new Vector2(160, 40);
+
+            buttonText = CreateText(btnObj, label, 16, TextAlignmentOptions.Center);
+            buttonText.rectTransform.anchorMin = Vector2.zero;
+            buttonText.rectTransform.anchorMax = Vector2.one;
+            buttonText.rectTransform.sizeDelta = Vector2.zero;
+            buttonText.color = Color.black;
+
+            return btn;
+        }
+
+        private TMP_Dropdown CreateDropdown(GameObject parent, string name)
+        {
+            // Creating a functional TMP_Dropdown from scratch via code is complex because of the template structure.
+            // We will create a simplified structure that mimics the default TMP Dropdown.
+            
+            GameObject root = new GameObject(name + " Dropdown");
+            root.transform.SetParent(parent.transform, false);
+            RectTransform rootRect = root.AddComponent<RectTransform>();
+            rootRect.sizeDelta = new Vector2(200, 35);
+
+            Image rootImage = root.AddComponent<Image>();
+            rootImage.color = new Color(1, 1, 1, 0.1f);
+
+            TMP_Dropdown dropdown = root.AddComponent<TMP_Dropdown>();
+            dropdown.targetGraphic = rootImage;
+
+            // Label
+            TextMeshProUGUI label = CreateText(root, name, 14, TextAlignmentOptions.Left);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(10, 0);
+            label.rectTransform.offsetMax = new Vector2(-25, 0);
+            dropdown.captionText = label;
+
+            // Arrow
+            GameObject arrow = new GameObject("Arrow");
+            arrow.transform.SetParent(root.transform, false);
+            RectTransform arrowRect = arrow.AddComponent<RectTransform>();
+            arrowRect.anchorMin = new Vector2(1, 0.5f);
+            arrowRect.anchorMax = new Vector2(1, 0.5f);
+            arrowRect.sizeDelta = new Vector2(20, 20);
+            arrowRect.anchoredPosition = new Vector2(-15, 0);
+            Image arrowImg = arrow.AddComponent<Image>();
+            arrowImg.color = Color.white;
+
+            // Template (The popup part)
+            GameObject template = new GameObject("Template");
+            template.transform.SetParent(root.transform, false);
+            template.SetActive(false);
+            RectTransform templateRect = template.AddComponent<RectTransform>();
+            templateRect.anchorMin = new Vector2(0, 0);
+            templateRect.anchorMax = new Vector2(1, 0);
+            templateRect.pivot = new Vector2(0.5f, 1);
+            templateRect.anchoredPosition = new Vector2(0, 2);
+            templateRect.sizeDelta = new Vector2(0, 150);
+            
+            Image templateImg = template.AddComponent<Image>();
+            templateImg.color = new Color(0.1f, 0.1f, 0.1f);
+            
+            ScrollRect scrollRect = template.AddComponent<ScrollRect>();
+            scrollRect.content = null; // Needs content
+            scrollRect.viewport = null; // Needs viewport
+
+            GameObject viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(template.transform, false);
+            RectTransform viewportRect = viewport.AddComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.sizeDelta = Vector2.zero;
+            Image viewportImg = viewport.AddComponent<Image>(); // Mask needs image
+            viewport.AddComponent<Mask>();
+
+            GameObject content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            RectTransform contentRect = content.AddComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0, 1);
+            contentRect.anchorMax = new Vector2(1, 1);
+            contentRect.pivot = new Vector2(0.5f, 1);
+            contentRect.sizeDelta = new Vector2(0, 28);
+
+            scrollRect.viewport = viewportRect;
+            scrollRect.content = contentRect;
+
+            // Item Template
+            GameObject item = new GameObject("Item");
+            item.transform.SetParent(content.transform, false);
+            RectTransform itemRect = item.AddComponent<RectTransform>();
+            itemRect.sizeDelta = new Vector2(0, 25);
+            itemRect.anchorMin = new Vector2(0, 0.5f);
+            itemRect.anchorMax = new Vector2(1, 0.5f);
+            
+            Toggle itemToggle = item.AddComponent<Toggle>();
+            
+            GameObject itemBackground = new GameObject("Item Background");
+            itemBackground.transform.SetParent(item.transform, false);
+            RectTransform itemBgRect = itemBackground.AddComponent<RectTransform>();
+            itemBgRect.anchorMin = Vector2.zero;
+            itemBgRect.anchorMax = Vector2.one;
+            itemBgRect.sizeDelta = Vector2.zero;
+            Image itemBgImg = itemBackground.AddComponent<Image>();
+            itemBgImg.color = new Color(1,1,1,0); // Transparent
+            itemToggle.targetGraphic = itemBgImg;
+
+            GameObject itemCheck = new GameObject("Item Checkmark");
+            itemCheck.transform.SetParent(item.transform, false);
+            RectTransform itemCheckRect = itemCheck.AddComponent<RectTransform>();
+            itemCheckRect.anchorMin = new Vector2(0, 0.5f);
+            itemCheckRect.anchorMax = new Vector2(0, 0.5f);
+            itemCheckRect.sizeDelta = new Vector2(20, 20);
+            itemCheckRect.anchoredPosition = new Vector2(10, 0);
+            Image itemCheckImg = itemCheck.AddComponent<Image>();
+            itemCheckImg.color = Color.green;
+            itemToggle.graphic = itemCheckImg;
+
+            TextMeshProUGUI itemLabel = CreateText(item, "Option A", 14, TextAlignmentOptions.Left);
+            itemLabel.rectTransform.anchorMin = Vector2.zero;
+            itemLabel.rectTransform.anchorMax = Vector2.one;
+            itemLabel.rectTransform.offsetMin = new Vector2(25, 0);
+            itemLabel.color = Color.white;
+
+            dropdown.template = templateRect;
+            dropdown.itemText = itemLabel;
+
+            return dropdown;
+        }
+#endif
     }
 }

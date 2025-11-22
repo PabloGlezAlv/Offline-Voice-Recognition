@@ -178,9 +178,9 @@ namespace OfflineSpeechRecognition.Download
                     if (File.Exists(model.ModelPath))
                     {
                         // Retry logic in case file is still locked by async operations
-                        // Increased from 3 retries to 5, and delay from 100ms to 500ms (total: 2.5 seconds)
-                        int maxRetries = 5;
-                        int retryDelay = 500; // milliseconds
+                        // Increased from 3 retries to 7, and delay from 100ms to 1000ms (total: 7 seconds)
+                        int maxRetries = 7;
+                        int retryDelay = 1000; // milliseconds
 
                         for (int attempt = 0; attempt < maxRetries; attempt++)
                         {

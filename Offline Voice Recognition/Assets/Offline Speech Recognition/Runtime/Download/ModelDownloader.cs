@@ -207,6 +207,12 @@ namespace OfflineSpeechRecognition.Download
                     return false;
                 }
 
+                // Only validate if download wasn't cancelled
+                if (!_isDownloading)
+                {
+                    return false; // Download was cancelled, don't validate
+                }
+
                 // Validate downloaded file integrity
                 if (ValidateModelIntegrity(model))
                 {
@@ -313,8 +319,8 @@ namespace OfflineSpeechRecognition.Download
             {
                 try
                 {
-                    // Wait up to 10 seconds for task to complete (increased from 5 to ensure file handles are released)
-                    _currentDownloadTask.Wait(TimeSpan.FromSeconds(10));
+                    // Wait up to 15 seconds for task to complete
+                    _currentDownloadTask.Wait(TimeSpan.FromSeconds(15));
                     Debug.Log("Download task completed after cancellation");
                 }
                 catch (AggregateException ex)
@@ -328,6 +334,10 @@ namespace OfflineSpeechRecognition.Download
             }
 
             _currentDownloadTask = null;
+
+            // Force garbage collection to release file handles
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
 
         /// <summary>
