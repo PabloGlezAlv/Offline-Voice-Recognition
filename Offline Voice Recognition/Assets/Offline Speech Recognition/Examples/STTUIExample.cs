@@ -24,6 +24,7 @@ namespace OfflineSpeechRecognition.Examples
         // UI Components
         private Button recordButton;
         private Button cancelButton;
+        private TextMeshProUGUI recordButtonText;
         private TMP_Dropdown microphoneDropdown;
         private TMP_Dropdown modelDropdown;
         private TMP_Dropdown languageDropdown;
@@ -227,10 +228,10 @@ namespace OfflineSpeechRecognition.Examples
             colors.pressedColor = new Color(0.15f, 0.6f, 0.15f, 1f);
             recordButton.colors = colors;
 
-            TextMeshProUGUI recordBtnText = recordBtnObj.AddComponent<TextMeshProUGUI>();
-            recordBtnText.text = "Start Recording";
-            recordBtnText.alignment = TextAlignmentOptions.Center;
-            recordBtnText.fontSize = 28;
+            recordButtonText = recordBtnObj.AddComponent<TextMeshProUGUI>();
+            recordButtonText.text = "Start Recording";
+            recordButtonText.alignment = TextAlignmentOptions.Center;
+            recordButtonText.fontSize = 28;
 
             // Cancel button
             GameObject cancelBtnObj = new GameObject("CancelButton");
@@ -774,9 +775,9 @@ namespace OfflineSpeechRecognition.Examples
             recordingStartTime = Time.time;
 
             // Update button text and show cancel button
-            if (recordButton != null)
+            if (recordButtonText != null)
             {
-                recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Stop Recording";
+                recordButtonText.text = "Stop Recording";
             }
             if (cancelButton != null)
             {
@@ -804,9 +805,9 @@ namespace OfflineSpeechRecognition.Examples
             isRecording = false;
 
             // Reset button text and hide cancel button
-            if (recordButton != null)
+            if (recordButtonText != null)
             {
-                recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Start Recording";
+                recordButtonText.text = "Start Recording";
             }
             if (cancelButton != null)
             {
@@ -828,9 +829,9 @@ namespace OfflineSpeechRecognition.Examples
             isRecording = false;
 
             // Reset button text and hide cancel button
-            if (recordButton != null)
+            if (recordButtonText != null)
             {
-                recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Start Recording";
+                recordButtonText.text = "Start Recording";
             }
             if (cancelButton != null)
             {
