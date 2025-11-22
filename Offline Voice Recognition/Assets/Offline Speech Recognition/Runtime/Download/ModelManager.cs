@@ -177,10 +177,25 @@ namespace OfflineSpeechRecognition.Download
                     // Delete model file directly (not a directory)
                     if (File.Exists(model.ModelPath))
                     {
-                        File.Delete(model.ModelPath);
-                        model.RefreshDownloadStatus();
-                        Debug.Log($"Model {size} deleted successfully");
-                        return true;
+                        // Retry logic in case file is still locked by async operations
+                        int maxRetries = 3;
+                        int retryDelay = 100; // milliseconds
+
+                        for (int attempt = 0; attempt < maxRetries; attempt++)
+                        {
+                            try
+                            {
+                                File.Delete(model.ModelPath);
+                                model.RefreshDownloadStatus();
+                                Debug.Log($"Model {size} deleted successfully");
+                                return true;
+                            }
+                            catch (System.IO.IOException) when (attempt < maxRetries - 1)
+                            {
+                                // File is in use, wait and retry
+                                System.Threading.Thread.Sleep(retryDelay);
+                            }
+                        }
                     }
                 }
             }
