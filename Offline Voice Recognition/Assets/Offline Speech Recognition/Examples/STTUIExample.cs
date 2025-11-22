@@ -353,7 +353,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
             captionText.text = "Select Microphone";
             captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.MiddleLeft;
+            captionText.alignment = TextAlignmentOptions.Left;
 
             microphoneDropdown.captionText = captionText;
         }
@@ -375,7 +375,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
             labelText.text = "Model:";
             labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelText.alignment = TextAlignmentOptions.Left;
 
             // Dropdown
             GameObject dropdownObj = new GameObject("ModelDropdown");
@@ -455,7 +455,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
             captionText.text = "Select Model";
             captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.MiddleLeft;
+            captionText.alignment = TextAlignmentOptions.Left;
 
             modelDropdown.captionText = captionText;
         }
@@ -477,7 +477,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI labelText = labelObj.AddComponent<TextMeshProUGUI>();
             labelText.text = "Language:";
             labelText.fontSize = 20;
-            labelText.alignment = TextAlignmentOptions.MiddleLeft;
+            labelText.alignment = TextAlignmentOptions.Left;
 
             // Dropdown
             GameObject dropdownObj = new GameObject("LanguageDropdown");
@@ -557,7 +557,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI captionText = captionObj.AddComponent<TextMeshProUGUI>();
             captionText.text = "Select Language";
             captionText.fontSize = 20;
-            captionText.alignment = TextAlignmentOptions.MiddleLeft;
+            captionText.alignment = TextAlignmentOptions.Left;
 
             languageDropdown.captionText = captionText;
         }
@@ -578,7 +578,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
             titleText.text = "Transcription:";
             titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.MiddleLeft;
+            titleText.alignment = TextAlignmentOptions.Left;
 
             // Text area
             GameObject textObj = new GameObject("TranscriptionText");
@@ -614,7 +614,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
             titleText.text = "Status:";
             titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.MiddleLeft;
+            titleText.alignment = TextAlignmentOptions.Left;
 
             // Text area
             GameObject textObj = new GameObject("StatusText");
@@ -628,7 +628,7 @@ namespace OfflineSpeechRecognition.Examples
             statusText = textObj.AddComponent<TextMeshProUGUI>();
             statusText.text = "Ready";
             statusText.fontSize = 18;
-            statusText.alignment = TextAlignmentOptions.MiddleLeft;
+            statusText.alignment = TextAlignmentOptions.Left;
 
             LayoutElement textLayoutElement = textObj.AddComponent<LayoutElement>();
             textLayoutElement.preferredHeight = 35;
@@ -650,7 +650,7 @@ namespace OfflineSpeechRecognition.Examples
             TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
             titleText.text = "Model Info:";
             titleText.fontSize = 20;
-            titleText.alignment = TextAlignmentOptions.MiddleLeft;
+            titleText.alignment = TextAlignmentOptions.Left;
 
             // Text area
             GameObject textObj = new GameObject("ModelInfoText");
