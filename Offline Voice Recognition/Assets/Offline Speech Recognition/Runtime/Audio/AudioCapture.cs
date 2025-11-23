@@ -156,15 +156,7 @@ namespace OfflineSpeechRecognition.Audio
         /// <summary>
         /// Check if currently recording
         /// </summary>
-        public bool IsRecording
-        {
-            get
-            {
-                bool micRecording = Microphone.IsRecording(_currentMicrophoneName);
-                Debug.Log($"[AudioCapture.IsRecording] _isRecording={_isRecording}, micRecording={micRecording}, _currentMicrophoneName={_currentMicrophoneName}");
-                return _isRecording && micRecording;
-            }
-        }
+        public bool IsRecording => _isRecording && Microphone.IsRecording(_currentMicrophoneName);
 
         /// <summary>
         /// Get list of available microphones
