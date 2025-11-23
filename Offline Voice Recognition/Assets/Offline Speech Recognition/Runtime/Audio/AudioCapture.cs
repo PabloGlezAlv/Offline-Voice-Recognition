@@ -231,5 +231,25 @@ namespace OfflineSpeechRecognition.Audio
         {
             return _currentMicrophoneName ?? Microphone.devices[0];
         }
+
+        /// <summary>
+        /// Get the recording clip for reading audio data
+        /// </summary>
+        public AudioClip GetRecordingClip()
+        {
+            return _recordingClip;
+        }
+
+        /// <summary>
+        /// Get the current recording position
+        /// </summary>
+        public int GetMicrophonePosition()
+        {
+            if (_isRecording && _recordingClip != null)
+            {
+                return Microphone.GetPosition(_currentMicrophoneName);
+            }
+            return 0;
+        }
     }
 }

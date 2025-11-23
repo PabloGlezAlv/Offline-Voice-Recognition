@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using OfflineSpeechRecognition.Core;
+using OfflineSpeechRecognition.Audio;
 using OfflineSpeechRecognition.Language;
 
 namespace OfflineSpeechRecognition.Examples
@@ -403,38 +404,36 @@ namespace OfflineSpeechRecognition.Examples
         /// </summary>
         private void UpdateVolumeIndicator()
         {
-            if (!isRecording || volumeIndicatorText == null)
+            if (!isRecording || volumeIndicatorText == null || sttEngine == null)
                 return;
 
             try
             {
-                // Get recording position from microphone
-                int position = Microphone.GetPosition(null);
+                // Get audio capture from engine
+                AudioCapture audioCapture = sttEngine.GetAudioCapture();
+                if (audioCapture == null)
+                    return;
 
-                if (position > 0)
+                // Get the recording clip and position
+                AudioClip recordingClip = audioCapture.GetRecordingClip();
+                int position = audioCapture.GetMicrophonePosition();
+
+                if (recordingClip != null && position > 0)
                 {
-                    // Get samples from the recording
+                    // Get samples from the recording clip
                     int sampleCount = Mathf.Min(position, 4410); // 0.25 seconds at 16kHz
                     float[] samples = new float[sampleCount];
+                    recordingClip.GetData(samples, Mathf.Max(0, position - sampleCount));
 
-                    // Create a temporary clip just to read from it
-                    AudioClip tempClip = Microphone.Start(null, true, 1, 16000);
-                    if (tempClip != null)
+                    // Calculate RMS (Root Mean Square) for volume
+                    float sum = 0f;
+                    foreach (float sample in samples)
                     {
-                        tempClip.GetData(samples, Mathf.Max(0, position - sampleCount));
-
-                        // Calculate RMS (Root Mean Square) for volume
-                        float sum = 0f;
-                        foreach (float sample in samples)
-                        {
-                            sum += sample * sample;
-                        }
-                        _currentVolume = Mathf.Sqrt(sum / samples.Length);
-
-                        volumeIndicatorText.text = $"Volume: {_currentVolume}";
-
-                        Microphone.End(null);
+                        sum += sample * sample;
                     }
+                    _currentVolume = Mathf.Sqrt(sum / samples.Length);
+
+                    volumeIndicatorText.text = $"Volume: {_currentVolume}";
                 }
             }
             catch (System.Exception ex)

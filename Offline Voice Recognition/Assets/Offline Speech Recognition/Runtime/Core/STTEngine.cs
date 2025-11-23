@@ -502,6 +502,14 @@ namespace OfflineSpeechRecognition.Core
         }
 
         /// <summary>
+        /// Get the audio capture component
+        /// </summary>
+        public AudioCapture GetAudioCapture()
+        {
+            return _audioCapture;
+        }
+
+        /// <summary>
         /// Get debug information
         /// </summary>
         public string GetDebugInfo()
