@@ -427,17 +427,7 @@ namespace OfflineSpeechRecognition.Examples
                     }
                     _currentVolume = Mathf.Sqrt(sum / samples.Length);
 
-                    // Create visual bar
-                    int barLength = 20;
-                    int filledBars = Mathf.RoundToInt(_currentVolume * barLength * 5); // 5x amplification for visibility
-                    filledBars = Mathf.Clamp(filledBars, 0, barLength);
-
-                    string volumeBar = new string('[', 1) +
-                                     new string('=', filledBars) +
-                                     new string('-', barLength - filledBars) +
-                                     new string(']', 1);
-
-                    volumeIndicatorText.text = $"Volume: {volumeBar} {(_currentVolume * 100):F1}%";
+                    volumeIndicatorText.text = $"Volume: {(_currentVolume * 100):F1}";
                 }
 
                 Microphone.End(null);
@@ -496,7 +486,7 @@ namespace OfflineSpeechRecognition.Examples
             statusText = CreateText(panelObj, "Ready", 18, TextAlignmentOptions.Left);
 
             // 5. Create Volume Indicator Text
-            volumeIndicatorText = CreateText(panelObj, "Volume: [--------------------] 0.0%", 14, TextAlignmentOptions.Left);
+            volumeIndicatorText = CreateText(panelObj, "Volume: 0.0", 14, TextAlignmentOptions.Left);
 
             // 6. Create Model Info Text
             modelInfoText = CreateText(panelObj, "Model Info...", 14, TextAlignmentOptions.Left);
