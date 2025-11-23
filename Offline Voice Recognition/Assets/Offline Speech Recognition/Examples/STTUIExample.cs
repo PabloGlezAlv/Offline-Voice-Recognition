@@ -200,12 +200,16 @@ namespace OfflineSpeechRecognition.Examples
         /// </summary>
         public void StartRecording()
         {
+            Debug.Log($"[StartRecording] Called - isRecording={isRecording}");
+
             if (isRecording)
             {
+                Debug.LogWarning("[StartRecording] Already recording");
                 UpdateStatus("Already recording");
                 return;
             }
 
+            Debug.Log("[StartRecording] Calling sttEngine.StartMicrophoneCapture()");
             sttEngine.StartMicrophoneCapture();
             isRecording = true;
             recordingStartTime = Time.time;
@@ -223,7 +227,7 @@ namespace OfflineSpeechRecognition.Examples
             UpdateStatus("[REC] Recording...");
             UpdateTranscriptionText("Listening...");
 
-            Debug.Log("Recording started");
+            Debug.Log($"[StartRecording] Complete - isRecording={isRecording}, sttEngine.IsRecording={sttEngine.IsRecording}");
         }
 
         /// <summary>
@@ -231,12 +235,16 @@ namespace OfflineSpeechRecognition.Examples
         /// </summary>
         public void StopAndTranscribe()
         {
+            Debug.Log($"[StopAndTranscribe] Called - isRecording={isRecording}");
+
             if (!isRecording)
             {
+                Debug.LogWarning("[StopAndTranscribe] Not recording, returning");
                 UpdateStatus("Not recording");
                 return;
             }
 
+            Debug.Log("[StopAndTranscribe] Calling sttEngine.TranscribeFromMicrophone()");
             sttEngine.TranscribeFromMicrophone();
             isRecording = false;
 
@@ -404,33 +412,60 @@ namespace OfflineSpeechRecognition.Examples
             if (!isRecording || volumeIndicatorText == null)
                 return;
 
-            // Get microphone audio position and samples
-            if (Microphone.IsRecording(null))
+            try
             {
-                int position = Microphone.GetPosition(null);
-
-                // Create a temporary clip to sample from microphone
-                AudioClip clip = Microphone.Start(null, true, 1, 16000);
-
-                if (clip != null && position > 0)
+                // Get recording clip from STT Engine's audio capture
+                if (sttEngine != null && sttEngine.IsRecording)
                 {
-                    // Get samples from the recording
-                    int sampleCount = Mathf.Min(position, 4410); // 0.25 seconds at 16kHz
-                    float[] samples = new float[sampleCount];
-                    clip.GetData(samples, Mathf.Max(0, position - sampleCount));
+                    Debug.Log("[UpdateVolumeIndicator] Engine is recording, attempting to read volume");
 
-                    // Calculate RMS (Root Mean Square) for volume
-                    float sum = 0f;
-                    foreach (float sample in samples)
+                    // Get the recording position from all microphones
+                    int position = Microphone.GetPosition(null);
+                    Debug.Log($"[UpdateVolumeIndicator] Microphone position: {position}");
+
+                    if (position > 0)
                     {
-                        sum += sample * sample;
+                        // Get samples from the recording
+                        int sampleCount = Mathf.Min(position, 4410); // 0.25 seconds at 16kHz
+                        float[] samples = new float[sampleCount];
+
+                        // Create a temporary clip just to read from it
+                        AudioClip tempClip = Microphone.Start(null, true, 1, 16000);
+                        if (tempClip != null)
+                        {
+                            tempClip.GetData(samples, Mathf.Max(0, position - sampleCount));
+
+                            // Calculate RMS (Root Mean Square) for volume
+                            float sum = 0f;
+                            foreach (float sample in samples)
+                            {
+                                sum += sample * sample;
+                            }
+                            _currentVolume = Mathf.Sqrt(sum / samples.Length);
+                            Debug.Log($"[UpdateVolumeIndicator] Calculated volume: {_currentVolume * 100:F1}%");
+
+                            volumeIndicatorText.text = $"Volume: {(_currentVolume * 100):F1}";
+
+                            Microphone.End(null);
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[UpdateVolumeIndicator] Failed to create temporary AudioClip");
+                        }
                     }
-                    _currentVolume = Mathf.Sqrt(sum / samples.Length);
-
-                    volumeIndicatorText.text = $"Volume: {(_currentVolume * 100):F1}";
+                    else
+                    {
+                        Debug.Log("[UpdateVolumeIndicator] Microphone position is 0");
+                    }
                 }
-
-                Microphone.End(null);
+                else
+                {
+                    Debug.Log($"[UpdateVolumeIndicator] Not recording - isRecording={isRecording}, sttEngine={sttEngine}, IsRecording={sttEngine?.IsRecording}");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UpdateVolumeIndicator] Error: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
