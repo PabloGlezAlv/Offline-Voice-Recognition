@@ -17,9 +17,11 @@ namespace OfflineSpeechRecognition.Examples
         [SerializeField] private TextMeshProUGUI transcriptionText;
         [SerializeField] private TextMeshProUGUI statusText;
         [SerializeField] private TextMeshProUGUI modelInfoText;
+        [SerializeField] private TextMeshProUGUI volumeIndicatorText;
 
         private bool isRecording = false;
         private float recordingStartTime = 0f;
+        private float _currentVolume = 0f;
 
         // UI Components
         [SerializeField] private Button recordButton;
@@ -62,6 +64,7 @@ namespace OfflineSpeechRecognition.Examples
         private void Update()
         {
             UpdateRecordingTime();
+            UpdateVolumeIndicator();
         }
 
         /// <summary>
@@ -217,7 +220,7 @@ namespace OfflineSpeechRecognition.Examples
                 cancelButton.gameObject.SetActive(true);
             }
 
-            UpdateStatus("🎤 Recording...");
+            UpdateStatus("[REC] Recording...");
             UpdateTranscriptionText("Listening...");
 
             Debug.Log("Recording started");
@@ -247,7 +250,7 @@ namespace OfflineSpeechRecognition.Examples
                 cancelButton.gameObject.SetActive(false);
             }
 
-            UpdateStatus("⏳ Processing audio...");
+            UpdateStatus("[...] Processing audio...");
         }
 
         /// <summary>
@@ -298,20 +301,20 @@ namespace OfflineSpeechRecognition.Examples
         private void HandleTranscriptionComplete(string text)
         {
             UpdateTranscriptionText(text);
-            UpdateStatus("✅ Transcription complete!");
+            UpdateStatus("[OK] Transcription complete!");
 
             Debug.Log($"Transcription: {text}");
         }
 
         private void HandleTranscriptionStarted()
         {
-            UpdateStatus("⏳ Processing audio...");
+            UpdateStatus("[...] Processing audio...");
             UpdateTranscriptionText("Processing...");
         }
 
         private void HandleError(string error)
         {
-            UpdateStatus($"❌ Error: {error}");
+            UpdateStatus($"[ERR] Error: {error}");
             UpdateTranscriptionText("");
 
             Debug.LogError($"STT Error: {error}");
@@ -360,7 +363,7 @@ namespace OfflineSpeechRecognition.Examples
             if (isRecording && statusText != null)
             {
                 float recordingTime = Time.time - recordingStartTime;
-                string timeText = $"🎤 Recording... {recordingTime:F1}s";
+                string timeText = $"[REC] Recording... {recordingTime:F1}s";
                 statusText.text = timeText;
             }
         }
@@ -372,7 +375,7 @@ namespace OfflineSpeechRecognition.Examples
         {
             int barLength = 20;
             int filledLength = Mathf.RoundToInt(progress * barLength);
-            string bar = new string('█', filledLength) + new string('░', barLength - filledLength);
+            string bar = new string('#', filledLength) + new string('-', barLength - filledLength);
             return $"[{bar}]";
         }
 
@@ -390,6 +393,54 @@ namespace OfflineSpeechRecognition.Examples
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"Error setting up TextMeshPro: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Update volume indicator from microphone input
+        /// </summary>
+        private void UpdateVolumeIndicator()
+        {
+            if (!isRecording || volumeIndicatorText == null)
+                return;
+
+            // Get microphone audio position and samples
+            if (Microphone.IsRecording(null))
+            {
+                int position = Microphone.GetPosition(null);
+
+                // Create a temporary clip to sample from microphone
+                AudioClip clip = Microphone.Start(null, true, 1, 16000);
+
+                if (clip != null && position > 0)
+                {
+                    // Get samples from the recording
+                    int sampleCount = Mathf.Min(position, 4410); // 0.25 seconds at 16kHz
+                    float[] samples = new float[sampleCount];
+                    clip.GetData(samples, Mathf.Max(0, position - sampleCount));
+
+                    // Calculate RMS (Root Mean Square) for volume
+                    float sum = 0f;
+                    foreach (float sample in samples)
+                    {
+                        sum += sample * sample;
+                    }
+                    _currentVolume = Mathf.Sqrt(sum / samples.Length);
+
+                    // Create visual bar
+                    int barLength = 20;
+                    int filledBars = Mathf.RoundToInt(_currentVolume * barLength * 5); // 5x amplification for visibility
+                    filledBars = Mathf.Clamp(filledBars, 0, barLength);
+
+                    string volumeBar = new string('[', 1) +
+                                     new string('=', filledBars) +
+                                     new string('-', barLength - filledBars) +
+                                     new string(']', 1);
+
+                    volumeIndicatorText.text = $"Volume: {volumeBar} {(_currentVolume * 100):F1}%";
+                }
+
+                Microphone.End(null);
             }
         }
 
@@ -443,11 +494,14 @@ namespace OfflineSpeechRecognition.Examples
 
             // 4. Create Status Text
             statusText = CreateText(panelObj, "Ready", 18, TextAlignmentOptions.Left);
-            
-            // 5. Create Model Info Text
+
+            // 5. Create Volume Indicator Text
+            volumeIndicatorText = CreateText(panelObj, "Volume: [--------------------] 0.0%", 14, TextAlignmentOptions.Left);
+
+            // 6. Create Model Info Text
             modelInfoText = CreateText(panelObj, "Model Info...", 14, TextAlignmentOptions.Left);
 
-            // 6. Create Controls Container (Horizontal)
+            // 7. Create Controls Container (Horizontal)
             GameObject controlsObj = new GameObject("Controls");
             controlsObj.transform.SetParent(panelObj.transform, false);
             RectTransform controlsRect = controlsObj.AddComponent<RectTransform>();
@@ -457,12 +511,12 @@ namespace OfflineSpeechRecognition.Examples
             controlsLayout.childControlWidth = true;
             controlsLayout.childForceExpandWidth = true;
 
-            // 7. Create Dropdowns
+            // 8. Create Dropdowns
             microphoneDropdown = CreateDropdown(controlsObj, "Microphone");
             modelDropdown = CreateDropdown(controlsObj, "Model");
             languageDropdown = CreateDropdown(controlsObj, "Language");
 
-            // 8. Create Buttons Container
+            // 9. Create Buttons Container
             GameObject buttonsObj = new GameObject("Buttons");
             buttonsObj.transform.SetParent(panelObj.transform, false);
             RectTransform buttonsRect = buttonsObj.AddComponent<RectTransform>();
@@ -473,15 +527,15 @@ namespace OfflineSpeechRecognition.Examples
             buttonsLayout.childForceExpandWidth = false;
             buttonsLayout.childAlignment = TextAnchor.MiddleCenter;
 
-            // 9. Create Record Button
+            // 10. Create Record Button
             recordButton = CreateButton(buttonsObj, "Start Recording", out recordButtonText);
-            
-            // 10. Create Cancel Button
+
+            // 11. Create Cancel Button
             cancelButton = CreateButton(buttonsObj, "Cancel", out TextMeshProUGUI cancelText);
             cancelButton.image.color = new Color(0.8f, 0.2f, 0.2f);
             cancelButton.gameObject.SetActive(false);
 
-            // 11. Create Transcription Text Area
+            // 12. Create Transcription Text Area
             GameObject scrollObj = new GameObject("Scroll View");
             scrollObj.transform.SetParent(panelObj.transform, false);
             RectTransform scrollRect = scrollObj.AddComponent<RectTransform>();
@@ -522,7 +576,7 @@ namespace OfflineSpeechRecognition.Examples
             scrollRectComp.viewport = viewportRect;
             scrollRectComp.movementType = ScrollRect.MovementType.Elastic;
 
-            // 12. Assign STTEngine if missing
+            // 13. Assign STTEngine if missing
             if (sttEngine == null)
             {
                 sttEngine = FindObjectOfType<STTEngine>();
