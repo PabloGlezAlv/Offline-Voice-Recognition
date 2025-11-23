@@ -32,15 +32,16 @@ namespace OfflineSpeechRecognition.Utilities
             { "large-v3-turbo", 1620000000 } // ~1.62 GB (ggml-large-v3-turbo.bin)
         };
 
-        // Model checksums (SHA256) for integrity verification
-        // Generate with: sha256sum ggml-*.bin
+        // Model checksums (SHA1) for integrity verification
+        // Generate with: sha1sum ggml-*.bin
+        // Source: https://huggingface.co/ggerganov/whisper.cpp
         public static readonly Dictionary<string, string> MODEL_CHECKSUMS = new Dictionary<string, string>()
         {
-            { "tiny", "d3b3fea2f4cc0d4cba7b3732a7aad899c3e4478d" },         // ggml-tiny.bin
-            { "small", "bc19f7fd388e432fa42ef6bda0f80981c7b36d45" },        // ggml-small.bin
-            { "medium", "517c90c226313bec34158f0f6ca784068efc2b35" },       // ggml-medium.bin
-            { "large-v3", "e4b97a5b64d1b1abf632723cb36d6693ee4c96cb" },     // ggml-large-v3.bin
-            { "large-v3-turbo", "1bd4928b586e5cdc0f47cba5039d9c7ba4e8c9eb" } // ggml-large-v3-turbo.bin
+            { "tiny", "bd577a113a864445d4c299885e0cb97d4ba92b5f" },         // ggml-tiny.bin
+            { "small", "55356645c2b361a969dfd0ef2c5a50d530afd8d5" },        // ggml-small.bin
+            { "medium", "fd9727b6e1217c2f614f9b698455c4ffd82463b4" },       // ggml-medium.bin
+            { "large-v3", "ad82bf6a9043ceed055076d0fd39f5f186ff8062" },     // ggml-large-v3.bin
+            { "large-v3-turbo", "4af2b29d7ec73d781377bfd1758ca957a807e941" } // ggml-large-v3-turbo.bin
         };
 
         // Whisper Configuration

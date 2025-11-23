@@ -148,6 +148,27 @@ namespace OfflineSpeechRecognition.Editor
         {
             Debug.LogError($"Download error: {error}");
 
+            // Log detailed error information for debugging
+            if (error.Contains("Checksum mismatch"))
+            {
+                Debug.LogError("[STTEngineEditor] Checksum validation failed!");
+                Debug.LogError("[STTEngineEditor] This typically means:");
+                Debug.LogError("[STTEngineEditor] 1. The downloaded file was corrupted during transfer");
+                Debug.LogError("[STTEngineEditor] 2. The checksum in Constants.cs might be outdated");
+                Debug.LogError("[STTEngineEditor] 3. The server returned an unexpected file");
+                Debug.LogError("[STTEngineEditor] The system will automatically retry (up to 3 attempts)");
+            }
+            else if (error.Contains("HTTP"))
+            {
+                Debug.LogError("[STTEngineEditor] Network/HTTP error detected");
+                Debug.LogError("[STTEngineEditor] Check your internet connection and Hugging Face server status");
+            }
+            else if (error.Contains("No data received"))
+            {
+                Debug.LogError("[STTEngineEditor] Server returned no data");
+                Debug.LogError("[STTEngineEditor] The download will be retried automatically");
+            }
+
             if (_engine != null)
             {
                 var models = _engine.GetAllModels();
@@ -156,7 +177,7 @@ namespace OfflineSpeechRecognition.Editor
                     if (_isDownloading.ContainsKey(model.Size) && _isDownloading[model.Size])
                     {
                         _isDownloading[model.Size] = false;
-                        _downloadingStatus[model.Size] = "Error";
+                        _downloadingStatus[model.Size] = "Error: Check console";
                         _downloadProgress[model.Size] = 0f;
                         break;
                     }

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git commit:*)",
       "Bash(powershell -Command \"(Get-ChildItem -Path ''Assets/Offline Speech Recognition/Runtime/Download/ModelDownloader.cs'' -ErrorAction SilentlyContinue) -and (Get-ChildItem -Path ''Assets/Offline Speech Recognition/Runtime/Download/ModelManager.cs'' -ErrorAction SilentlyContinue) -and (Get-ChildItem -Path ''Assets/Offline Speech Recognition/Editor/STTEngineEditor.cs'' -ErrorAction SilentlyContinue) | ForEach-Object { Write-Host ''File exists: '' $_FullName }\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(sha1sum:*)"
     ],
     "deny": [],
     "ask": []

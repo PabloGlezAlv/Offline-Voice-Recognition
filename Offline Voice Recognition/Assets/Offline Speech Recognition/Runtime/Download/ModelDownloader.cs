@@ -23,8 +23,8 @@ namespace OfflineSpeechRecognition.Download
         private Task _currentDownloadTask;
 
         // Download optimization settings
-        private const int OPTIMAL_BUFFER_SIZE = 262144; // 256 KB buffer for faster I/O
-        private const int YIELD_INTERVAL = 10; // Yield every N chunk reads to keep Unity responsive
+        private const int OPTIMAL_BUFFER_SIZE = 1048576; // 1 MB buffer for faster I/O (increased from 256 KB)
+        private const int YIELD_INTERVAL = 50; // Yield every N chunk reads to keep Unity responsive (increased from 10)
 
         /// <summary>
         /// Callback for download progress
@@ -54,7 +54,7 @@ namespace OfflineSpeechRecognition.Download
             if (_httpClient == null)
             {
                 // Optimize ServicePointManager for faster downloads
-                ServicePointManager.DefaultConnectionLimit = 10; // Allow more concurrent connections
+                ServicePointManager.DefaultConnectionLimit = 100; // Allow more concurrent connections (increased from 10)
 
                 var handler = new HttpClientHandler
                 {
@@ -121,6 +121,8 @@ namespace OfflineSpeechRecognition.Download
             string modelDir = model.GetModelDirectory();
             bool success = false;
             string errorMessage = "";
+            int maxRetries = 3;
+            int currentRetry = 0;
 
             try
             {
@@ -130,18 +132,56 @@ namespace OfflineSpeechRecognition.Download
                     Directory.CreateDirectory(modelDir);
                 }
 
-                // Download the model file
-                success = await DownloadFileAsync(url, model.ModelPath, model);
+                // Retry loop for download failures (excluding checksum mismatches on last attempt)
+                while (currentRetry < maxRetries && !success && _isDownloading)
+                {
+                    try
+                    {
+                        // Download the model file
+                        success = await DownloadFileAsync(url, model.ModelPath, model);
+
+                        if (!success && currentRetry < maxRetries - 1)
+                        {
+                            currentRetry++;
+                            errorMessage = $"Download attempt {currentRetry} of {maxRetries} failed. Retrying...";
+                            Debug.LogWarning($"[ModelDownloader.DownloadModelAsync] {errorMessage}");
+
+                            // Exponential backoff: wait 2^retry seconds
+                            int waitSeconds = (int)System.Math.Pow(2, currentRetry);
+                            await Task.Delay(waitSeconds * 1000);
+
+                            // Clean up incomplete file before retry
+                            CleanupIncompleteFile(model.ModelPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        currentRetry++;
+                        if (currentRetry < maxRetries)
+                        {
+                            Debug.LogWarning($"[ModelDownloader.DownloadModelAsync] Retry {currentRetry}: {ex.Message}");
+                            int waitSeconds = (int)System.Math.Pow(2, currentRetry);
+                            await Task.Delay(waitSeconds * 1000);
+                            CleanupIncompleteFile(model.ModelPath);
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                }
 
                 if (_isDownloading) // Check if download wasn't cancelled
                 {
                     if (success)
                     {
                         model.RefreshDownloadStatus();
+                        Debug.Log($"[ModelDownloader.DownloadModelAsync] Download successful for {model.GetSizeString()}");
                         OnDownloadComplete?.Invoke(true);
                     }
                     else
                     {
+                        errorMessage = $"Download failed after {maxRetries} attempts for {model.GetSizeString()}";
                         OnDownloadError?.Invoke(errorMessage);
                         OnDownloadComplete?.Invoke(false);
                     }
@@ -269,7 +309,9 @@ namespace OfflineSpeechRecognition.Download
                     }
                 }
 
+                // Ensure all data is written to disk before validating
                 await fileStream.FlushAsync();
+                fileStream.Close(); // Close file to ensure proper syncing before validation
             }
             catch (Exception ex)
             {
@@ -381,13 +423,19 @@ namespace OfflineSpeechRecognition.Download
 
             if (!File.Exists(model.ModelPath))
             {
+                Debug.LogError($"Model file does not exist at: {model.ModelPath}");
                 return false;
             }
+
+            // Verify file size first
+            var fileInfo = new FileInfo(model.ModelPath);
+            Debug.Log($"[ModelDownloader.ValidateModelIntegrity] {model.GetSizeString()} - File size: {fileInfo.Length / (1024.0 * 1024.0):F2} MB");
 
             string actualChecksum = CalculateFileSHA1(model.ModelPath);
 
             if (actualChecksum == null)
             {
+                Debug.LogError($"Failed to calculate checksum for {model.GetSizeString()}");
                 return false;
             }
 
@@ -395,6 +443,12 @@ namespace OfflineSpeechRecognition.Download
             if (!isValid)
             {
                 Debug.LogError($"Checksum mismatch for {model.GetSizeString()}");
+                Debug.LogError($"  Expected: {expectedChecksum}");
+                Debug.LogError($"  Actual:   {actualChecksum}");
+            }
+            else
+            {
+                Debug.Log($"[ModelDownloader.ValidateModelIntegrity] {model.GetSizeString()} checksum valid: {actualChecksum}");
             }
 
             return isValid;
